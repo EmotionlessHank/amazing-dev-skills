@@ -15,6 +15,24 @@ Write production-grade Product Requirements Documents following a proven PM meth
 ### [Daily Report](./daily-report)
 一键生成每日开发日报。自动扫描当日所有分支（含 worktree）的 git 提交记录，按功能模块分组，生成大厂风格结构化日报表格，归档至 `.progress/daily-reports/`。支持指定日期回溯，方便飞书文档归档与产品经理跟进。
 
+### [Finance Analyze](./finance-analyze)
+分析银行账单 PDF，自动分类交易、生成分类汇总与 Excel 报告，对比上期数据标出异常变化，更新财务上下文并输出关键发现摘要。
+
+### [Finance Health](./finance-health)
+执行家庭财务健康检查。计算现金流、应急储备覆盖月数、目标资金充足率，输出综合评分和改进建议的健康报告卡。
+
+### [Finance Update](./finance-update)
+通过自然语言更新财务上下文信息。自动判断修改对应的 YAML 文件（收入、支出、目标、汇率、家庭信息），支持目标状态流转。
+
+### [Finance Forecast](./finance-forecast)
+基于当前收入支出数据和假设参数，预测未来 6-12 个月的现金流走势，标注风险节点（余额触及安全线、储备耗尽时间等）。
+
+### [Finance Summary](./finance-summary)
+一页式家庭财务概况速览。展示账户余额、月度支出、进行中目标、汇率、海外储备跑道等关键信息，并标注过期数据提醒更新。
+
+### [Weekly Sync](./weekly-sync)
+生成面向产品经理的周工作同步报告。自动扫描上周及本周所有分支的 git 提交记录，按业务维度归纳，输出 Lark 友好的无序列表格式，可直接复制发送。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

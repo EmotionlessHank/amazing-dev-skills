@@ -33,6 +33,9 @@ Write production-grade Product Requirements Documents following a proven PM meth
 ### [Weekly Sync](./weekly-sync)
 生成面向产品经理的周工作同步报告。自动扫描上周及本周所有分支的 git 提交记录，按业务维度归纳，输出 Lark 友好的无序列表格式，可直接复制发送。
 
+### [Sync Tokens](./sync-tokens)
+同步 Figma Design Token 到项目代码。接收 Figma 导出的 JSON 文件路径，自动复制到 `tokens/figma/`、运行同步脚本生成 CSS 变量和 TS 常量、展示 diff。无参数调用时提醒提供文件路径。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

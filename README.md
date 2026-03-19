@@ -36,6 +36,9 @@ Write production-grade Product Requirements Documents following a proven PM meth
 ### [Sync Tokens](./sync-tokens)
 同步 Figma Design Token 到项目代码。接收 Figma 导出的 JSON 文件路径，自动复制到 `tokens/figma/`、运行同步脚本生成 CSS 变量和 TS 常量、展示 diff。无参数调用时提醒提供文件路径。
 
+### [Parallel Worktree](./parallel-worktree)
+并行 Worktree 开发编排。自动执行任务分解、文件所有权冲突检查、worktree 创建、聚焦上下文注入、合并指引。借鉴 Anthropic 16 并行 Agent 构建 C 编译器的工程模式，解决"任务拆分不当导致合并冲突"和"Agent 缺乏聚焦上下文导致越界修改"两大核心问题。附带 Anthropic CCC 模式参考文档。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

@@ -39,6 +39,9 @@ Write production-grade Product Requirements Documents following a proven PM meth
 ### [Parallel Worktree](./parallel-worktree)
 并行 Worktree 开发编排。自动执行任务分解、文件所有权冲突检查、worktree 创建、聚焦上下文注入、合并指引。借鉴 Anthropic 16 并行 Agent 构建 C 编译器的工程模式，解决"任务拆分不当导致合并冲突"和"Agent 缺乏聚焦上下文导致越界修改"两大核心问题。附带 Anthropic CCC 模式参考文档。
 
+### [Sentry](./sentry)
+Sentry 错误巡检与 Regression 测试自动生成。连接 Sentry API 获取线上未解决的 Fatal/Error Issue，按阈值规则（资金零容忍、Fatal 零容忍、Error ≥3次/小时）过滤，自动定位源文件并生成 co-location regression 测试骨架。支持手动模式回退（Sentry 未接入时手动描述错误）。四阶段流程：获取 → 过滤 → 生成 → 验证。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

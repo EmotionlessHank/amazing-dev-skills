@@ -17,7 +17,7 @@ version: 1.0.0
 
 ```bash
 # 检查环境变量
-echo "SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:+SET}"
+echo "SENTRY_AUTH_TOKEN: \${SENTRY_LOCAL_AUTH_TOKEN:+SET}"
 echo "SENTRY_ORG: ${SENTRY_ORG:-NOT_SET}"
 echo "SENTRY_PROJECT: ${SENTRY_PROJECT:-NOT_SET}"
 ```
@@ -40,11 +40,11 @@ Sentry Issues search 不支持原生 OR 语法，`level:fatal level:error` 会�
 
 ```bash
 # 请求 1: 获取未解决的 Fatal 级别 Issues（最近 7 天）
-FATAL_ISSUES=$(curl -s -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
+FATAL_ISSUES=$(curl -s -H "Authorization: Bearer \${SENTRY_LOCAL_AUTH_TOKEN}" \
   "https://sentry.io/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}/issues/?query=is:unresolved+level:fatal&statsPeriod=7d&limit=20")
 
 # 请求 2: 获取未解决的 Error 级别 Issues（最近 7 天）
-ERROR_ISSUES=$(curl -s -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
+ERROR_ISSUES=$(curl -s -H "Authorization: Bearer \${SENTRY_LOCAL_AUTH_TOKEN}" \
   "https://sentry.io/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}/issues/?query=is:unresolved+level:error&statsPeriod=7d&limit=20")
 
 # 合并去重（按 Issue id 去重）
@@ -73,7 +73,7 @@ echo "$FATAL_ISSUES" "$ERROR_ISSUES" | jq -s 'add | unique_by(.id)'
 对每个需要处理的 Issue，获取最新事件的堆栈：
 
 ```bash
-curl -s -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
+curl -s -H "Authorization: Bearer \${SENTRY_LOCAL_AUTH_TOKEN}" \
   "https://sentry.io/api/0/issues/{issue_id}/events/latest/" \
   | jq '.'
 ```

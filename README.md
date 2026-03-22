@@ -42,6 +42,9 @@ Write production-grade Product Requirements Documents following a proven PM meth
 ### [Sentry](./sentry)
 Sentry 错误巡检与 Regression 测试自动生成。连接 Sentry API 获取线上未解决的 Fatal/Error Issue，按阈值规则（资金零容忍、Fatal 零容忍、Error ≥3次/小时）过滤，自动定位源文件并生成 co-location regression 测试骨架。支持手动模式回退（Sentry 未接入时手动描述错误）。四阶段流程：获取 → 过滤 → 生成 → 验证。
 
+### [Daily Todo](./daily-todo)
+每日待办管理。支持每日任务录入、增删改查、状态更新、自动归档。用户描述今日计划后自动解析为结构化待办，写入 `.progress/REMINDERS.md`，可选同步到 macOS Reminders.app。已完成任务按月归档至 `.progress/archive/reminders/`。支持遗留任务处理、日期智能推断、优先级自动判定。
+
 ### [Mac Cleanup](./mac-cleanup)
 macOS 系统清理审计。自动扫描 /Applications 中长期未使用的应用、Homebrew/npm/pip 包管理器中的冗余包和缓存、~/Library/Caches 系统缓存、Xcode DerivedData 等，输出结构化清理建议报告（含可回收空间估算和风险等级），等用户确认后再执行删除操作。
 

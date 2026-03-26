@@ -1,7 +1,7 @@
 ---
 name: sentry
-description: Sentry 错误巡检与 Regression 测试生成。当用户说 "/sentry"、"检查 Sentry"、"Sentry 巡检"、"sentry scan"、"生成回归测试" 时触发。连接 Sentry API 获取未解决的 Fatal/Error Issue，按阈值规则过滤，自动定位源文件并生成 regression 测试骨架，输出待 review 的测试列表。
-version: 1.0.0
+description: Sentry 错误巡检与 Regression 测试生成。当用户说 "/sentry"、"检查 Sentry"、"Sentry 巡检"、"sentry scan"、"生成回归测试" 时触发。当用户粘贴 Sentry Issue URL 时，自动进入单 Issue 诊断模式（diagnose），从 URL 解析 Issue ID → API 获取元数据+堆栈 → 源码定位 → 根因分析 → 修复。连接 Sentry API 获取未解决的 Fatal/Error Issue，按阈值规则过滤，自动定位源文件并生成 regression 测试骨架，输出待 review 的测试列表。
+version: 1.1.0
 ---
 
 # /sentry — Sentry 错误巡检与 Regression 测试自动生成
@@ -339,6 +339,191 @@ it('regression: MANUAL-20260320 — {description}', () => {
   // TODO: implement assertion
 })
 ```
+
+---
+
+## 单 Issue 诊断模式（Diagnose）
+
+### 触发条件
+
+用户粘贴 Sentry Issue URL（如 `https://oddfi.sentry.io/issues/7364402444/...`），或说"定位这个 Sentry 错误"、"诊断这个 issue"。
+
+### Step 1: URL 解析
+
+从 URL 中提取关键参数：
+
+```
+https://{org}.sentry.io/issues/{issue_id}/?environment={env}&project={project_id}
+                                            ↑                  ↑
+                                            可选过滤           项目 ID
+```
+
+提取：`issue_id`（必须）、`org`（从子域名，备用从 .env.local）
+
+### Step 2: 加载认证
+
+```bash
+source <(grep -E '^SENTRY_(LOCAL_AUTH_TOKEN|ORG|PROJECT)=' .env.local)
+```
+
+优先使用 `SENTRY_LOCAL_AUTH_TOKEN`（Personal Token，有 issue 读取权限）。
+`SENTRY_AUTH_TOKEN`（Org Token）通常仅有 source map 上传权限，查 issue 会 403。
+
+### Step 3: 获取 Issue 元数据
+
+```bash
+curl -s -H "Authorization: Bearer ${SENTRY_LOCAL_AUTH_TOKEN}" \
+  "https://sentry.io/api/0/organizations/${SENTRY_ORG}/issues/${ISSUE_ID}/" \
+  | jq '{
+    id, title, level, status,
+    substatus, priority, count, userCount,
+    firstSeen, lastSeen,
+    culprit,
+    type: .metadata.type,
+    value: .metadata.value,
+    filename: .metadata.filename,
+    platform,
+    release: .firstRelease.shortVersion
+  }'
+```
+
+**关键字段速查**：
+
+| 字段 | 诊断价值 |
+|------|---------|
+| `title` | 错误一句话概括 |
+| `culprit` | 出错的路由/函数（如 `GET /zh/markets`） |
+| `metadata.filename` | 出错的源文件路径 |
+| `platform` | `node` = SSR 端 / `javascript` = 客户端 — **决定修复方向** |
+| `count` / `userCount` | 频次和影响用户数 |
+| `substatus` | `new` / `regressed` / `escalating` — 判断是新问题还是回归 |
+| `priority` | Sentry 自动评级（high/medium/low） |
+
+### Step 4: 获取最新事件（完整堆栈）
+
+```bash
+curl -s -H "Authorization: Bearer ${SENTRY_LOCAL_AUTH_TOKEN}" \
+  "https://sentry.io/api/0/organizations/${SENTRY_ORG}/issues/${ISSUE_ID}/events/latest/" \
+  | jq '.'
+```
+
+**从事件中提取三类信息**：
+
+#### 4a. 堆栈帧（从底到顶读）
+
+```
+entries[0].data.values[0].stacktrace.frames[]
+```
+
+- `inApp: true` 的帧 = 项目代码（重点关注）
+- `inApp: false` 的帧 = node_modules（追踪依赖调用链）
+- 从最底层帧（触发点）向上追溯到项目代码帧 = **根因定位路径**
+
+#### 4b. Tags（环境上下文）
+
+```
+tags[] → { key, value }
+```
+
+关键 tag：
+- `runtime` → `node` 说明在 SSR 阶段触发
+- `transaction` → 触发的路由（如 `GET /zh/markets`）
+- `browser` / `os` → 客户端环境（仅客户端错误有用）
+- `mechanism` → `auto.node.onunhandledrejection` / `onerror` 等
+
+#### 4c. Contexts（运行环境详情）
+
+```
+contexts.runtime → { name, version }   // node v24.13.0 = Vercel SSR
+contexts.cloud_resource → { cloud.provider, cloud.region }
+```
+
+### Step 5: 根因分析决策树
+
+```
+1. platform == "node" ?
+   ├─ YES → SSR 端错误
+   │   ├─ 错误涉及浏览器 API（indexedDB/localStorage/window/document）?
+   │   │   → 模块顶层代码在 SSR 执行了浏览器专属 API
+   │   │   → 修复: typeof window 守卫 / dynamic import / 延迟初始化
+   │   │
+   │   ├─ 错误来自 node_modules 依赖?
+   │   │   → 依赖未做 SSR 兼容
+   │   │   → 修复: next/dynamic + ssr:false / 条件导入
+   │   │
+   │   └─ 错误来自项目 API Route / Server Component?
+   │       → 检查数据获取逻辑
+   │
+   └─ NO → 客户端错误
+       ├─ 堆栈全是 node_modules 帧?（钱包扩展/第三方注入）
+       │   → SKIP，建议 Sentry "Delete and discard"
+       │
+       └─ 有项目代码帧?
+           → 正常 Bug，定位源文件修复
+```
+
+### Step 6: 源码追踪
+
+从堆栈的**项目代码帧**出发，在本地代码中定位：
+
+```bash
+# 1. 找到堆栈中的项目文件
+# 堆栈显示: lib/connectors.ts → 去项目中读取该文件
+
+# 2. 追踪导入链（谁导入了这个模块，导致它在 SSR 被执行）
+grep -r "from.*connectors" --include="*.ts" --include="*.tsx" | grep -v node_modules
+
+# 3. 确认 'use client' 边界是否正确
+# 检查导入链上的每个文件是否有 'use client' 标记
+```
+
+### Step 7: 修复 → 验证 → 提交
+
+1. **最小化修复**：只改出问题的文件，不扩大范围
+2. **类型检查**：`pnpm tsc --noEmit`
+3. **构建验证**：`pnpm build`（确认编译通过）
+4. **测试**：`pnpm test`（确认无回归）
+5. **提交**：commit message 中注明 `Sentry: ODDFI-FRONTEND-{N}`
+
+### 输出格式
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 Sentry Issue 诊断报告
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Issue: ODDFI-FRONTEND-{N} (#{issue_id})
+错误: {exception type}: {exception message}
+路由: {culprit}
+环境: {platform} / {runtime} / {cloud provider}
+频次: {count} 次 ({firstSeen} ~ {lastSeen})
+优先级: {priority}
+
+📍 调用链:
+  {项目文件} → {中间依赖} → {触发点（最底层帧）}
+
+🔬 根因:
+  {一句话描述根因}
+
+🛠️ 修复:
+  文件: {修改的文件}
+  方案: {修复方案简述}
+  Commit: {commit hash}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Sentry API 端点速查
+
+| 用途 | 端点 | 说明 |
+|------|------|------|
+| Issue 元数据 | `GET /api/0/organizations/{org}/issues/{id}/` | 标题、级别、频次 |
+| 最新事件 | `GET /api/0/organizations/{org}/issues/{id}/events/latest/` | 堆栈、tags、contexts |
+| 事件列表 | `GET /api/0/organizations/{org}/issues/{id}/events/` | 所有事件（分页） |
+| Issue 列表 | `GET /api/0/projects/{org}/{project}/issues/` | 批量查询（巡检模式用） |
+
+> **注意**：`sentry-cli issues` 子命令仅支持 `list/mute/resolve`，不支持查看单个 Issue 详情。
+> 单 Issue 诊断必须用 REST API（curl）。
 
 ---
 

@@ -40,7 +40,7 @@ Write production-grade Product Requirements Documents following a proven PM meth
 并行 Worktree 开发编排。自动执行任务分解、文件所有权冲突检查、worktree 创建、聚焦上下文注入、合并指引。借鉴 Anthropic 16 并行 Agent 构建 C 编译器的工程模式，解决"任务拆分不当导致合并冲突"和"Agent 缺乏聚焦上下文导致越界修改"两大核心问题。附带 Anthropic CCC 模式参考文档。
 
 ### [Sentry](./sentry)
-Sentry 错误巡检与 Regression 测试自动生成。连接 Sentry API 获取线上未解决的 Fatal/Error Issue，按阈值规则（资金零容忍、Fatal 零容忍、Error ≥3次/小时）过滤，自动定位源文件并生成 co-location regression 测试骨架。支持手动模式回退（Sentry 未接入时手动描述错误）。四阶段流程：获取 → 过滤 → 生成 → 验证。
+Sentry 错误巡检与 Regression 测试自动生成。两种模式：**批量巡检**（连接 Sentry API 获取未解决 Fatal/Error Issue，按阈值过滤，生成 regression 测试骨架）和 **单 Issue 诊断**（粘贴 Sentry URL → 解析 Issue ID → API 获取元数据+堆栈 → 根因决策树分析 → 源码追踪 → 修复验证）。内含 Sentry REST API 端点速查表和 SSR/客户端错误诊断决策树。
 
 ### [Daily Todo](./daily-todo)
 每日待办管理。支持每日任务录入、增删改查、状态更新、自动归档。用户描述今日计划后自动解析为结构化待办，写入 `.progress/REMINDERS.md`，可选同步到 macOS Reminders.app。已完成任务按月归档至 `.progress/archive/reminders/`。支持遗留任务处理、日期智能推断、优先级自动判定。

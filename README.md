@@ -69,6 +69,9 @@ Pencil 设计稿像素级还原强制流程。将 .pen 设计文件通过 6 步 
 ### [UI Design Plan](./ui-design-plan)
 UI 设计方案制定 Prompt 优化器。将模糊的"帮我做 UI 设计方案"需求，转化为结构化的 DAG 执行计划。自动读取 PRD 提取关键信息，构建竞品清单（7 维度分析），分析项目设计系统可复用资产，组装包含 `/ui-ux-pro-max` + `/design-with-claude` + `/omc visual-verdict` 三个设计 Skill 编排的完整执行流水线，内置人类确认门禁防止走偏。
 
+### [Live Photo](./live-photo)
+将视频转为 iPhone Live Photo 素材。自动从视频提取封面图、转 HEVC MOV（3 秒）、用 makelive 写入配对元数据，最后提示用户拖入 Mac 照片 app 同步到 iPhone。支持自定义封面时间点、视频时长、起始时间。
+
 ### [Grill Me](./grill-me)
 Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when you want to stress-test a plan, get grilled on your design, or just say "grill me".
 

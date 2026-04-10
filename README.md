@@ -72,6 +72,9 @@ UI 设计方案制定 Prompt 优化器。将模糊的"帮我做 UI 设计方案"
 ### [Live Photo](./live-photo)
 将视频转为 iPhone Live Photo 素材。自动从视频提取封面图、转 HEVC MOV（3 秒）、用 makelive 写入配对元数据，最后提示用户拖入 Mac 照片 app 同步到 iPhone。支持自定义封面时间点、视频时长、起始时间。
 
+### [Worktree Dev](./worktree-dev)
+强制 Worktree 隔离开发。从 main 拉新分支创建 worktree 到 `.claude/worktrees/<name>/`，全程锁定工作目录，严禁跳回主工作区修改代码。解决"Agent 跳出 worktree 污染主工作区"和"忘记从 main 拉新分支"两大高频问题。含路径守卫自检、批次开发播报、Agent 委派隔离约束注入。
+
 ### [Grill Me](./grill-me)
 Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when you want to stress-test a plan, get grilled on your design, or just say "grill me".
 

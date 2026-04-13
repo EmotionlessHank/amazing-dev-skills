@@ -75,6 +75,9 @@ UI 设计方案制定 Prompt 优化器。将模糊的"帮我做 UI 设计方案"
 ### [Worktree Dev](./worktree-dev)
 强制 Worktree 隔离开发。从 main 拉新分支创建 worktree 到 `.claude/worktrees/<name>/`，全程锁定工作目录，严禁跳回主工作区修改代码。解决"Agent 跳出 worktree 污染主工作区"和"忘记从 main 拉新分支"两大高频问题。含路径守卫自检、批次开发播报、Agent 委派隔离约束注入。
 
+### [Partial Commit](./partial-commit)
+部分提交 — 仅提交当前会话的修改，不影响其他并行 tab 的改动。通过比较会话启动时的 gitStatus 快照与当前状态，自动识别本会话新产生的改动、存疑文件（会话前已脏+本会话也改过）、其他 tab 改动三类，展示分类结果让用户确认后再提交。解决多 tab 并行开发时 `git add -A` 误提交其他 tab 改动的问题。
+
 ### [Grill Me](./grill-me)
 Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when you want to stress-test a plan, get grilled on your design, or just say "grill me".
 

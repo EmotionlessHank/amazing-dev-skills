@@ -1,0 +1,82 @@
+{
+  "_comment": "Persistent creator → design style memory. Add entries as new creators/themes are processed.",
+  "_last_updated": "2026-05-15",
+
+  "creators": {
+    "sunge": {
+      "aliases": ["孙哥", "sunge", "chendengdeng93", "@chendengdeng93"],
+      "themes": ["金融", "人生规划", "财富", "行业选择", "创业", "加密", "投资", "理财", "FIRE"],
+      "design_style": "elevenlabs",
+      "design_note": "暗黑电影感 · Noto Serif SC 300 weight · 近黑背景 #0c0a09 · 渐变光晕 orbs · 无霓虹 · 段落感强",
+      "counter": 1,
+      "first_seen": "2026-05-15",
+      "sample_file": "001-sunge-财务目标从100万到一个亿.html"
+    }
+  },
+
+  "theme_keywords": {
+    "金融":     "elevenlabs",
+    "财富":     "elevenlabs",
+    "理财":     "elevenlabs",
+    "投资":     "elevenlabs",
+    "创业":     "elevenlabs",
+    "人生规划": "elevenlabs",
+    "行业":     "elevenlabs",
+    "加密":     "elevenlabs",
+    "FIRE":     "elevenlabs",
+    "AI":       "minimax",
+    "技术":     "cursor",
+    "开发":     "cursor",
+    "音乐":     "spotify",
+    "娱乐":     "spotify",
+    "设计":     "figma",
+    "极简":     "vercel",
+    "健康":     "replicate",
+    "旅行":     "airbnb"
+  },
+
+  "design_catalog": {
+    "elevenlabs": {
+      "desc": "暗黑电影感，音频波形美学，衬线细字体，渐变光晕",
+      "best_for": "金融/财富/人生规划/加密/严肃内容",
+      "bg": "#0c0a09",
+      "accent": "mint #a7e5d3 / peach #f4c5a8 / lavender #c8b8e0",
+      "font_display": "Noto Serif SC 300"
+    },
+    "minimax": {
+      "desc": "深黑霓虹，粗体冲击，科技感强",
+      "best_for": "AI/科技/产品/未来感",
+      "bg": "#0a0a0f",
+      "accent": "neon green / electric blue",
+      "font_display": "bold sans"
+    },
+    "cursor": {
+      "desc": "开发者暗色，代码感，克制精准",
+      "best_for": "技术/开发/工具/SaaS",
+      "bg": "#0f0f0f",
+      "accent": "orange #f54e00",
+      "font_display": "system-ui 400"
+    },
+    "spotify": {
+      "desc": "深黑绿色，音乐驱动，封面图主导",
+      "best_for": "音乐/娱乐/内容创作",
+      "bg": "#121212",
+      "accent": "green #1db954",
+      "font_display": "bold sans"
+    },
+    "vercel": {
+      "desc": "极简黑白，高对比，无装饰",
+      "best_for": "极简/工具/开发者/发布",
+      "bg": "#000000",
+      "accent": "white only",
+      "font_display": "Geist 400"
+    },
+    "figma": {
+      "desc": "多彩活泼，专业设计感",
+      "best_for": "设计/创意/协作",
+      "bg": "#1e1e1e",
+      "accent": "multi-color",
+      "font_display": "Inter 400"
+    }
+  }
+}

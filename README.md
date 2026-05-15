@@ -81,6 +81,9 @@ UI 设计方案制定 Prompt 优化器。将模糊的"帮我做 UI 设计方案"
 ### [Grill Me](./grill-me)
 Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when you want to stress-test a plan, get grilled on your design, or just say "grill me".
 
+### [Video to HTML Presentation](./video-to-html-pres)
+把视频（文件或链接）转换成手机端短视频风格的交互式 HTML 演示文稿，带同步字幕。输入视频 + 创作者社媒账号，输出标准命名的单文件 `.html`（含 base64 音频）和 `.vtt` 字幕。内置多套设计风格（ElevenLabs 暗黑电影感、MiniMax 科技霓虹、Cursor 开发者极简等），通过 `memory/creator-styles.json` 持久记忆 creator → 风格映射，保证同一 creator 所有视频风格一致。支持 Whisper 词级时间戳、帧 OCR 和逐帧手动三种字幕提取方式。适合内容创作者把 KOL 视频精华做成可分享的手机端知识卡片。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

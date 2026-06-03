@@ -69,6 +69,9 @@ Pencil 设计稿像素级还原强制流程。将 .pen 设计文件通过 6 步 
 ### [Pen Audit](./pen-audit)
 Pencil 设计稿结构自审查门禁。用确定性 lint（L1–L6）检测绝对定位退化（`layout:none`+0 组件）、文字/组件溢出、未换行的 chip/标签云、幽灵节点等"原则性错误"，输出可执行体检报告。基于 `snapshot_layout`+`batch_get`，把"还原对不对"从肉眼看截图变成机器可判；与 Pencil Impl 配套，作为落地代码前的设计侧门禁。
 
+### [Pen2Swift](./pen2swift)
+Pencil 设计稿 → SwiftUI 高保真落地全链路，把"还原设计稿"从肉眼复刻变成闭环视觉比对。流水线：① `pen-audit` 结构门禁（不让绝对定位/溢出的稿进代码）→ ② 导出参考真值 PNG + token 数值 → ③ token 驱动生成 SwiftUI（chip 标签云用 `Layout` 自定义 `FlowLayout` 动态换行，动态文本 `lineLimit`+`minimumScaleFactor` 防截断）→ ④ XcodeBuildMCP 最坏矩阵截图（最大 Dynamic Type × 最长 locale）→ ⑤ `visual-verdict` 结构化比对 → ⑥ `swift-snapshot-testing` 快照闸把溢出/截断钉死在 CI。内含 token→SwiftUI 映射表与铁律 UI 清单（过敏永不 safe / ED 无热量等）。与 Pen Audit 配套，是设计门禁之后的落地流水线。
+
 ### [UI Design Plan](./ui-design-plan)
 UI 设计方案制定 Prompt 优化器。将模糊的"帮我做 UI 设计方案"需求，转化为结构化的 DAG 执行计划。自动读取 PRD 提取关键信息，构建竞品清单（7 维度分析），分析项目设计系统可复用资产，组装包含 `/ui-ux-pro-max` + `/design-with-claude` + `/omc visual-verdict` 三个设计 Skill 编排的完整执行流水线，内置人类确认门禁防止走偏。
 

@@ -1,0 +1,15 @@
+# /etc/caddy/Caddyfile — sslip.io 反代最小配置
+# <DOMAIN> = <公网IP用连字符>.sslip.io，例：52-77-48-244.sslip.io
+# Caddy 自动用 tls-alpn-01 / http-01 向 Let's Encrypt 签发并续期证书。
+
+<DOMAIN> {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:<PORT>
+}
+
+# 多应用同机示例（按路径分流）：
+# <DOMAIN> {
+# 	encode zstd gzip
+# 	handle_path /app1/* { reverse_proxy 127.0.0.1:8848 }
+# 	handle_path /app2/* { reverse_proxy 127.0.0.1:8849 }
+# }

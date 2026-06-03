@@ -1,0 +1,20 @@
+# ~/.config/systemd/user/<app>.service
+# systemd user 服务：应用只监听 127.0.0.1，由 Caddy 反代。
+# 装：systemctl --user daemon-reload && systemctl --user enable --now <app>
+# 需开 linger 才能开机/登出后常驻：sudo loginctl enable-linger $USER
+
+[Unit]
+Description=<App 描述> (localhost only, behind Caddy)
+After=network.target
+
+[Service]
+WorkingDirectory=%h/apps/<app>
+EnvironmentFile=%h/apps/<app>/.env
+# Python venv：
+ExecStart=%h/apps/<app>/.venv/bin/python %h/apps/<app>/app.py
+# Node：ExecStart=/usr/bin/node %h/apps/<app>/server.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

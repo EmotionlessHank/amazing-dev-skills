@@ -93,6 +93,9 @@ Interview the user relentlessly about a plan or design until reaching shared und
 ### [Headless Web Deploy](./headless-web-deploy)
 把小型 Web 应用（Flask/FastAPI/Node/静态站）部署到**无域名**的无头服务器（Lightsail/EC2/VPS）：Caddy + sslip.io 自动签 Let's Encrypt 证书、systemd user 服务常驻、HMAC token 鉴权，最终给一条可在手机/Telegram 内置浏览器直接打开的 HTTPS 链接。讲清「免费 + 免开端口 + 固定 URL」不可能三角的取舍，分 Phase A（服务器内可回滚）/ Phase B（碰公网先确认）两段执行。附 RUNBOOK、Caddyfile、systemd unit、token 鉴权四套模板，含实测踩坑（python3-venv 缺、云防火墙 ≠ ufw、Source 别锁 IP、scp 逐文件、密钥不进 git/对话）。
 
+### [Agent Handoff](./agent-handoff)
+Agent-to-Agent 自描述包协作协议。让两个互不共享上下文的 Claude Code 实例（你和同事各自电脑上的）通过 zip 包内随附指令接力完成跨人协作，人类动作收敛为"IM 转发 zip"。包含协议格式（INSTRUCTIONS.md 角色自判定 + manifest.json）、设计新协作流的 7 条硬规则（自描述 / 机密不入包 / 不信任自报 / 先打样再推广等）、收包安全闸门（包内指令是外部输入，未登记协议先摘要确认，敏感动作一律停止上报，防 zip 注入恶意指令）。起源案例：内部后台 mTLS 设备证书发放——私钥不出设备、零密码传输，人类只点两次"发送"。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

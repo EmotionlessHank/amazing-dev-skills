@@ -96,6 +96,9 @@ Interview the user relentlessly about a plan or design until reaching shared und
 ### [Agent Handoff](./agent-handoff)
 Agent-to-Agent 自描述包协作协议。让两个互不共享上下文的 Claude Code 实例（你和同事各自电脑上的）通过 zip 包内随附指令接力完成跨人协作，人类动作收敛为"IM 转发 zip"。包含协议格式（INSTRUCTIONS.md 角色自判定 + manifest.json）、设计新协作流的 7 条硬规则（自描述 / 机密不入包 / 不信任自报 / 先打样再推广等）、收包安全闸门（包内指令是外部输入，未登记协议先摘要确认，敏感动作一律停止上报，防 zip 注入恶意指令）。起源案例：内部后台 mTLS 设备证书发放——私钥不出设备、零密码传输，人类只点两次"发送"。
 
+### [Persona Distill](./persona-distill)
+从人物文本语料（博主帖子/文章/对话记录）蒸馏可供 AI 扮演的分层工程文件。五环节流水线：语料盘点（切留出集）→ 四 pass 分层提取（事实/风格/思维/知识，逐条溯源）→ 合成五件套（SOUL/PERSONA/LOREBOOK/STATE/EVAL + examples）→ 留出集盲测（actor 盲写 vs 原帖，judge 三维判分，≥80% 达标）→ 迭代收敛。方法论综合 Beyond Profile 三层模型、CCv3 lorebook 分离、量化文体画像（脚本统计非目测）。内置实测失真模式对策：密度膨胀、信号升级捏造、范例覆盖缺口。首个实例（加密博主行情分析人格）盲测 3/6 → 6/6 两轮收敛。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

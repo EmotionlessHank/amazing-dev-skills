@@ -82,7 +82,7 @@ UI 设计方案制定 Prompt 优化器。将模糊的"帮我做 UI 设计方案"
 将视频转为 iPhone Live Photo 素材。自动从视频提取封面图、转 HEVC MOV（3 秒）、用 makelive 写入配对元数据，最后提示用户拖入 Mac 照片 app 同步到 iPhone。支持自定义封面时间点、视频时长、起始时间。
 
 ### [Worktree Dev](./worktree-dev)
-强制 Worktree 隔离开发。从 main 拉新分支创建 worktree 到 `.claude/worktrees/<name>/`，全程锁定工作目录，严禁跳回主工作区修改代码。解决"Agent 跳出 worktree 污染主工作区"和"忘记从 main 拉新分支"两大高频问题。含路径守卫自检、批次开发播报、Agent 委派隔离约束注入。
+强制 Worktree 隔离开发（v2，多项目通用版）。从主分支拉新分支创建 worktree → **symlink 同步 env/个人配置**（非 cp，避免静态快照偏离）→ 全程锁定工作目录，严禁跳回主工作区修改代码。解决"Agent 跳出 worktree 污染主工作区"和"忘记从主分支拉新分支"两大高频问题。含 **Pre-batch 批量 Read 清单**（避免逐文件 Edit-fail 往返）、路径守卫自检、批次开发播报、Agent 委派隔离约束注入。配 SETUP.md 占位符迁移指南（重点定制 `{ENV_FILES}` symlink 清单）。与 feat/autopilot 配套：worktree-dev 搭隔离环境 → feat 出方案 → autopilot 开发。
 
 ### [Partial Commit](./partial-commit)
 部分提交 — 仅提交当前会话的修改，不影响其他并行 tab 的改动。通过比较会话启动时的 gitStatus 快照与当前状态，自动识别本会话新产生的改动、存疑文件（会话前已脏+本会话也改过）、其他 tab 改动三类，展示分类结果让用户确认后再提交。解决多 tab 并行开发时 `git add -A` 误提交其他 tab 改动的问题。

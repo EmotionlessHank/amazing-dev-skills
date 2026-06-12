@@ -105,6 +105,9 @@ Agent-to-Agent 自描述包协作协议。让两个互不共享上下文的 Clau
 ### [Persona Distill](./persona-distill)
 从人物文本语料（博主帖子/文章/对话记录）蒸馏可供 AI 扮演的分层工程文件。五环节流水线：语料盘点（切留出集）→ 四 pass 分层提取（事实/风格/思维/知识，逐条溯源）→ 合成五件套（SOUL/PERSONA/LOREBOOK/STATE/EVAL + examples）→ 留出集盲测（actor 盲写 vs 原帖，judge 三维判分，≥80% 达标）→ 迭代收敛。方法论综合 Beyond Profile 三层模型、CCv3 lorebook 分离、量化文体画像（脚本统计非目测）。内置实测失真模式对策：密度膨胀、信号升级捏造、范例覆盖缺口。首个实例（加密博主行情分析人格）盲测 3/6 → 6/6 两轮收敛。
 
+### [Back to CN Proxy](./back-to-cn-proxy)
+在一台「中国大陆 IP」的云服务器上一键部署回国代理（sing-box，Shadowsocks-2022 + Hysteria2），供 iPhone Shadowrocket 以中国 IP 访问小红书等国内 App。三件套：`deploy-singbox.sh`（服务器侧：GitHub 加速镜像下载 + 多镜像 SHA256 交叉校验 → 装 sing-box → 生成密钥/自签证书 → systemd 自启 → ufw+fail2ban → 端到端自检）+ `gen-client.py`（本地生成 ss:// / hysteria2:// 链接、二维码、Shadowrocket .conf）+ SKILL.md（前置条件、规则模式、调优排障）。内置实战教训：直播带宽撞墙吐字（高峰值带宽机型解决）、Shadowrocket .conf 不支持 SS-2022 加密（.conf 只放 Hy2、SS 用扫码）、AirPlay 投屏本地直连规则。
+
 ## Usage
 
 You can use these skills by integrating them with your favorite AI agents (e.g., Gemini CLI, Claude Code).

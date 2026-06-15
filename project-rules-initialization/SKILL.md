@@ -41,7 +41,7 @@ Synthesize the project's technical architecture, baseline instructions, React/Ne
 
 Create **`.progress/common-rules.md`** with the following baseline structures (adapt specific technologies based on the project at hand):
 
-1. **Core Interaction Protocol**: Language preferences (e.g., Simple Chinese for output), "think before you act" requirements, file mutation limits (max 3 files before splitting task), and continuous rule evolution.
+1. **Core Interaction Protocol**: Language preferences (e.g., Simplified Chinese for output), "think before you act" requirements, file mutation limits (max 3 files before splitting task), and continuous rule evolution.
 2. **Collaboration Setup**: Formal explanation of `.progress` folders (`tasks`, `review-docs`, `rewind-docs`) and inter-agent operability boundaries.
 3. **Architecture & Standards**: Framework stack configuration, architectural data-flow, component splitting rules, rendering optimization mandates, etc.
 4. **Code Quality & Code Review Reception**: Strict parameters against token superficiality—telling the agent to verify before implementing, rejecting "You're absolutely right" sycophancy, pushing back against YAGNI violations, and enforcing atomic commit verifications.
@@ -57,11 +57,11 @@ To prevent divergence, inject a preamble into these specific files linking them 
 #### Create/Overwrite `rules.md` (For Antigravity/Gemini CLI)
 Add the preamble:
 ```markdown
-# 🚦 [Project Name] (Antigravity / Gemini CLI) 专属指令规范
+# 🚦 [Project Name] (Antigravity / Gemini CLI) Instruction Specification
 
-> **⚠️ 同步声明**
-> 此文件为了保证多 Agent 分发一致性而构建。本规范的本源与唯一事实规则来源于项目的通用真规文件：`.progress/common-rules.md` 。
-> 作为项目内部的主要开发和辅助 Agent，你在项目内的所有判断和底层逻辑操作均受下方**通用规则**的核心约束。如果项目规范有变动或者需要进化迭代，必须立刻前往 `.progress/common-rules.md` 中进行补充更新！
+> **⚠️ Sync Declaration**
+> This file is maintained to ensure consistent distribution across multiple agents. The authoritative source and single source of truth for this specification is the project's common rule file: `.progress/common-rules.md`.
+> As a primary development and assistant agent within this project, all your judgments and low-level operations are governed by the **common rules** below. If the project specification changes or needs to evolve, you must immediately update `.progress/common-rules.md` first!
 
 ---
 ```
@@ -70,11 +70,11 @@ Add the preamble:
 #### Create/Overwrite `CLAUDE.md` (For Claude Code)
 Add the preamble:
 ```markdown
-# 🚦 [Project Name] (Claude Code) 专属代码审查与协作规范
+# 🚦 [Project Name] (Claude Code) Code Review & Collaboration Specification
 
-> **⚠️ 同步声明**
-> 此文件为了保证基于大模型应用多端（如 Claude）的约束力。本规范的本源与唯一事实规则来源于：`.progress/common-rules.md` 。
-> 作为被召唤的查错/审阅 (Code Review) 或协作开发 Agent，你接手的查阅验证与产本提交均受后续列出的**通用规则**管制。一旦对项目认知产生优化迭代，或得到人类指令改变行为，必须将改动反映到 `.progress/common-rules.md`，然后再扩散至此类端文件。
+> **⚠️ Sync Declaration**
+> This file is maintained to enforce constraints across LLM-based multi-platform clients (such as Claude). The authoritative source and single source of truth for this specification is: `.progress/common-rules.md`.
+> As a code review or collaborative development agent, all your verification, review, and commit work is governed by the **common rules** listed below. Whenever your understanding of the project is refined or you receive a human instruction that changes behavior, reflect the change in `.progress/common-rules.md` first, then propagate it to client-specific files like this one.
 
 ---
 ```

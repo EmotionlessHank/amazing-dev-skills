@@ -1,36 +1,36 @@
-# Anthropic C 编译器并行模式参考
+# Anthropic C Compiler Parallel Patterns Reference
 
-> 来源：Nicholas Carlini (Anthropic) 用 16 并行 Claude Agent 构建 10 万行 Rust C 编译器的工程实践。
+> Source: Engineering practices from Nicholas Carlini (Anthropic) building a 100k-line Rust C compiler using 16 parallel Claude agents.
 
-## 核心架构模式
+## Core Architecture Patterns
 
-### 1. Git 文件锁（分布式互斥）
+### 1. Git File Locking (Distributed Mutual Exclusion)
 
 ```
 current_tasks/
-  parse_if_statement.txt      ← Agent A 认领
-  codegen_function_def.txt    ← Agent B 认领
+  parse_if_statement.txt      ← Claimed by Agent A
+  codegen_function_def.txt    ← Claimed by Agent B
 ```
 
-- 认领：写文件 + git push
-- 冲突：第二个 push 失败 → pull → 看到锁 → 换任务
-- 释放：删文件 + push 代码
+- Claim: write file + git push
+- Conflict: second push fails → pull → sees the lock → picks a different task
+- Release: delete file + push code
 
-**本项目适配**：用 `.progress/tasks/` 中的 markdown 文件实现类似机制，每个 worktree Agent 认领独立 todo 条目。
+**Adaptation for this project**: Use markdown files in `.progress/tasks/` to implement a similar mechanism — each worktree agent claims an independent todo item.
 
-### 2. 角色分工
+### 2. Role Specialization
 
-不是每个 Agent 都做相同的事：
+Not every agent does the same work:
 
-| 角色 | 本项目对应 |
-|------|-----------|
-| 核心实现 Agent | 页面/组件开发 |
-| 去重专家 | 代码复用审查 |
-| 性能优化师 | Bundle / 渲染性能优化 |
-| 设计评审员 | Review Agent |
-| 文档维护者 | DD 文档更新 |
+| Role | Project Equivalent |
+|------|--------------------|
+| Core implementation agent | Page/component development |
+| Deduplication expert | Code reuse review |
+| Performance optimizer | Bundle / rendering performance |
+| Design reviewer | Review Agent |
+| Documentation maintainer | DD document updates |
 
-### 3. RALPH 循环（无限循环 + 全新上下文）
+### 3. RALPH Loop (Infinite loop + fresh context each iteration)
 
 ```bash
 while true; do
@@ -39,27 +39,27 @@ while true; do
 done
 ```
 
-每轮全新 session，通过外部文件传递"记忆"。适用于过夜批处理场景。
+Each iteration starts a fresh session; "memory" is passed via external files. Useful for overnight batch processing.
 
-### 4. 上下文管理策略
+### 4. Context Management Strategy
 
-- 控制台输出极简（几行）
-- 详细信息写日志文件
-- 聚合统计代替原始输出
-- 每轮 session 全新上下文，靠 README/进度文件传递记忆
+- Keep console output minimal (a few lines)
+- Write detailed information to log files
+- Use aggregated summaries instead of raw output
+- Fresh context each session; pass state via README/progress files
 
-### 5. "GCC 预言机"反模式解决
+### 5. Solving the "GCC Oracle" Anti-Pattern
 
-问题：多个 Agent 同时发现并修复同一个 bug（羊群效应）。
+Problem: Multiple agents simultaneously discover and fix the same bug (herd behavior).
 
-解法：将整体调试问题拆成可独立认领的小问题，每个 Agent 负责不同的文件/模块。
+Solution: Break the overall debugging problem into independently claimable sub-problems, with each agent responsible for a different file/module.
 
-**本项目适配**：按路由目录天然隔离，每个 worktree 只负责一个页面的文件范围。
+**Adaptation for this project**: Naturally isolated by route directory — each worktree is responsible for the file scope of exactly one page.
 
-## 关键教训
+## Key Lessons
 
-1. **设计环境，不设计解决方案** — 精力花在测试套件和反馈机制上
-2. **近乎完美的验证器** — 如果测试有缺口，Agent 会"解决错误的问题"
-3. **专门角色 > 通用 Agent** — 有专门的 refactorer、optimizer、critic
-4. **上下文轮转** — 每轮全新 session 避免上下文窗口耗尽
-5. **并行需要创造性分解** — 不是所有任务天然可并行，需要工程化拆分
+1. **Design the environment, not the solution** — Invest effort in the test suite and feedback mechanisms
+2. **Near-perfect validators** — If tests have gaps, agents will "solve the wrong problem"
+3. **Specialized roles > general-purpose agents** — Dedicated refactorer, optimizer, and critic roles
+4. **Context rotation** — Fresh session each iteration prevents context window exhaustion
+5. **Parallelism requires creative decomposition** — Not all tasks are naturally parallelizable; it takes engineering to split them correctly

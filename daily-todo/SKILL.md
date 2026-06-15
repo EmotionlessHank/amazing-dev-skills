@@ -1,95 +1,95 @@
 ---
 name: daily-todo
-description: 每日待办管理。当用户说 "/daily-todo"、"今日待办"、"记一下今天要做的"、"更新待办"、"daily todo"、"todo" 时触发。支持每日任务录入、增删改查、状态更新、归档，并同步写入 macOS Reminders.app。
+description: Daily to-do management. Triggers when the user says "/daily-todo", "today's tasks", "add tasks for today", "update todo", "daily todo", or "todo". Supports task entry, CRUD operations, status updates, and archiving, with optional sync to macOS Reminders.app.
 version: 1.0.0
 ---
 
-# /daily-todo — 每日待办管理
+# /daily-todo — Daily To-Do Management
 
-半自动、用户触发的每日 To-Do List 管理流程。支持任务录入、增删改查、状态同步、自动归档。
+A semi-automated, user-triggered daily to-do list management workflow. Supports task entry, CRUD operations, status sync, and automatic archiving.
 
 ---
 
-## 触发条件
+## Trigger Conditions
 
-用户说出以下任意关键词：
+Activate on any of the following keywords:
 - `/daily-todo`
-- `今日待办`、`记一下今天要做的`、`更新待办`、`待办`
-- `daily todo`、`todo`、`update todo`
+- `today's tasks`, `add tasks for today`, `update todo`, `todo`
+- `daily todo`, `update todo`
 
 ---
 
-## 核心文件
+## Core Files
 
-| 文件 | 用途 |
-|------|------|
-| `.progress/REMINDERS.md` | 活跃待办（当天 + 未来日期的未完成任务） |
-| `.progress/archive/reminders/{YYYY-MM}.md` | 按月归档已完成任务 |
+| File | Purpose |
+|------|---------|
+| `.progress/REMINDERS.md` | Active to-dos (today's + future undone tasks) |
+| `.progress/archive/reminders/{YYYY-MM}.md` | Completed tasks archived by month |
 
 ---
 
-## 执行步骤
+## Execution Steps
 
-### Mode A：每日录入（首次调用 / 新的一天）
+### Mode A: Daily Entry (first call of the day / new day)
 
-当用户在一天的开始调用此 Skill 并描述今日计划时：
+When the user invokes this skill at the start of a day and describes their plans:
 
-#### Step 1：读取现有状态
+#### Step 1: Read Current State
 
-读取 `.progress/REMINDERS.md`，检查：
-- 是否有昨天或更早的未完成任务（需要决定是否延续）
-- 是否有今天的 section 已存在
+Read `.progress/REMINDERS.md` and check:
+- Whether there are uncompleted tasks from yesterday or earlier (decide whether to carry them forward)
+- Whether a section for today already exists
 
-#### Step 2：解析用户输入
+#### Step 2: Parse User Input
 
-从用户的自然语言描述中提取：
-- **任务标题**：简洁概括（不超过 20 字）
-- **优先级**：`高优` / `中优` / `低优`（根据语气和上下文推断）
-- **子项**：关键细节，每条不超过一行
-- **日期归属**：判断任务属于今天、明天、还是其他日期
+Extract the following from the user's natural language description:
+- **Task title**: concise summary (max 20 characters)
+- **Priority**: `High` / `Medium` / `Low` (inferred from tone and context)
+- **Sub-items**: key details, one line each
+- **Date assignment**: determine whether the task belongs to today, tomorrow, or another date
 
-**日期推断规则**：
-- "今天要做"、"今日"、无时间修饰 → 当天日期
-- "明天"、"下周" → 对应的绝对日期
-- "这周内"、"周末前" → 转换为具体截止日期
-- 若无法判断，主动询问用户
+**Date inference rules**:
+- "do today", "today", no time qualifier → current date
+- "tomorrow", "next week" → corresponding absolute date
+- "this week", "before the weekend" → convert to a specific deadline
+- When date cannot be determined, ask the user
 
-#### Step 3：更新 REMINDERS.md
+#### Step 3: Update REMINDERS.md
 
-在 `## 每日工作提醒` 下按日期分 section 写入：
+Write entries under `## Daily Work Reminders`, organized by date section:
 
 ```markdown
 ### {YYYY-MM-DD}
 
-- [ ] **{任务标题}** `{优先级}`
-  - {子项 1}
-  - {子项 2}
+- [ ] **{task title}** `{priority}`
+  - {sub-item 1}
+  - {sub-item 2}
 ```
 
-**排序规则**：日期 section 按时间倒序（最新在最上面），同一天内按优先级排序（高 > 中 > 低）。
+**Ordering rules**: date sections in reverse chronological order (newest on top); within the same day, ordered by priority (High > Medium > Low).
 
-#### Step 4：输出确认
+#### Step 4: Output Confirmation
 
-以简洁表格形式输出录入结果，供用户确认：
+Output the recorded tasks in a concise table for the user to review:
 
 ```
-今日待办已录入（{YYYY-MM-DD}）：
+To-dos recorded for {YYYY-MM-DD}:
 
-| # | 任务 | 优先级 |
-|---|------|--------|
-| 1 | ... | 高优 |
-| 2 | ... | 中优 |
+| # | Task | Priority |
+|---|------|----------|
+| 1 | ... | High |
+| 2 | ... | Medium |
 
-共 {N} 项。需要调整请直接说。
+{N} item(s) total. Say what you'd like to change.
 ```
 
-#### Step 5：Reminders.app 同步提示
+#### Step 5: Reminders.app Sync Prompt
 
-输出以下提示，让用户决定是否同步到系统提醒：
+Prompt the user to decide whether to sync to system reminders:
 
-> 需要同步到 Reminders.app 吗？说「写入提醒」我会用 AppleScript 批量创建到 Work 列表。
+> Want to sync to Reminders.app? Say "write reminders" and I'll use AppleScript to bulk-create them in the Work list.
 
-若用户确认，使用 AppleScript 批量创建：
+If confirmed, use AppleScript to create them in bulk:
 
 ```bash
 osascript -e '
@@ -98,127 +98,127 @@ tell application "Reminders"
         make new list with properties {name:"Work"}
     end if
     tell list "Work"
-        make new reminder with properties {name:"{任务标题}", body:"{备注}", due date:date "{YYYY-MM-DD}", priority:{0|1|5|9}}
+        make new reminder with properties {name:"{task title}", body:"{notes}", due date:date "{YYYY-MM-DD}", priority:{0|1|5|9}}
     end tell
 end tell'
 ```
 
-**优先级映射**：高优 → 1，中优 → 5，低优 → 9
+**Priority mapping**: High → 1, Medium → 5, Low → 9
 
 ---
 
-### Mode B：增删改查（后续调用）
+### Mode B: CRUD Operations (subsequent calls)
 
-当用户在同一天内再次调用，或在对话中说出更新指令时：
+When the user invokes this skill again on the same day, or issues update commands within the conversation:
 
-#### 新增任务
-- 用户说"再加一个 XX" → 追加到当天 section
-- 同步更新 REMINDERS.md
+#### Add a Task
+- User says "add XX" → append to today's section
+- Update REMINDERS.md accordingly
 
-#### 完成任务
-- 用户说"XX 做完了"、"第 2 个完成了" → 将 `- [ ]` 改为 `- [x]` 并标注完成时间
-- 触发归档检查（见 Mode C）
+#### Complete a Task
+- User says "XX is done" or "number 2 is complete" → change `- [ ]` to `- [x]` and note the completion time
+- Trigger archiving check (see Mode C)
 
-#### 删除任务
-- 用户说"XX 不做了"、"删掉第 3 个" → 从 REMINDERS.md 中移除
-- 如已同步到 Reminders.app，提示用户手动删除（AppleScript 删除需要精确匹配，风险较高）
+#### Delete a Task
+- User says "drop XX" or "remove number 3" → delete from REMINDERS.md
+- If already synced to Reminders.app, prompt the user to delete it manually (AppleScript deletion requires exact matching and carries higher risk)
 
-#### 修改任务
-- 用户说"把 XX 改成 YY"、"第 1 个优先级调低" → 原地更新
+#### Modify a Task
+- User says "change XX to YY" or "lower the priority of number 1" → update in place
 
-#### 查看任务
-- 用户说"看看今天还有什么没做"、"待办列表" → 读取 REMINDERS.md 并输出当天未完成项
+#### View Tasks
+- User says "what's left today" or "show my todo list" → read REMINDERS.md and output today's incomplete items
 
-**每次增删改查操作后**，都必须：
-1. 同步更新 `.progress/REMINDERS.md` 文件
-2. 输出操作后的最新状态
+**After every CRUD operation**, you must:
+1. Update `.progress/REMINDERS.md` immediately
+2. Output the latest state after the operation
 
 ---
 
-### Mode C：归档
+### Mode C: Archiving
 
-#### 触发条件
-- 任务被标记为完成时
-- 新的一天开始、录入新任务前（自动清理前一天已完成项）
+#### Trigger Conditions
+- A task is marked as complete
+- A new day begins before entering new tasks (auto-clean the previous day's completed items)
 
-#### 归档流程
+#### Archiving Process
 
-1. 从 REMINDERS.md 中找出所有 `- [x]` 的已完成任务
-2. 按完成月份写入 `.progress/archive/reminders/{YYYY-MM}.md`
-3. 从 REMINDERS.md 中移除已归档任务
-4. 若某个日期 section 下所有任务都已归档，移除该空 section
+1. Find all `- [x]` completed tasks in REMINDERS.md
+2. Write them to `.progress/archive/reminders/{YYYY-MM}.md` organized by completion month
+3. Remove the archived tasks from REMINDERS.md
+4. If all tasks under a date section have been archived, remove the empty section
 
-#### 归档文件格式
+#### Archive File Format
 
 ```markdown
-# 已完成待办归档 — {YYYY-MM}
+# Completed To-Dos Archive — {YYYY-MM}
 
 ## {YYYY-MM-DD}
 
-- [x] **{任务标题}** `{优先级}` (完成于 {HH:MM})
-  - {子项}
+- [x] **{task title}** `{priority}` (completed at {HH:MM})
+  - {sub-item}
 ```
 
 ---
 
-## 遗留任务处理
+## Handling Leftover Tasks
 
-当新的一天开始时，如果 REMINDERS.md 中有**前一天或更早的未完成任务**：
+When a new day begins and REMINDERS.md contains **uncompleted tasks from the previous day or earlier**:
 
-1. 列出所有遗留任务
-2. 询问用户逐项处理：
-   - **延续到今天**：移到今天的 section
-   - **推迟到指定日期**：移到对应 section
-   - **放弃**：直接移除（不归档）
-3. 不允许"静默忽略"——必须让用户做出决定
+1. List all leftover tasks
+2. Ask the user to handle each one:
+   - **Carry forward to today**: move to today's section
+   - **Defer to a specific date**: move to the corresponding section
+   - **Drop it**: remove entirely (not archived)
+3. Silent ignoring is not allowed — the user must make a decision for each item
 
 ---
 
-## REMINDERS.md 结构规范
+## REMINDERS.md Structure Specification
 
 ```markdown
-# Reminders — 日常待办追踪
+# Reminders — Daily To-Do Tracker
 
-> 维护规则（保持不变）
-
----
-
-## 每日工作提醒
-
-### {最新日期}
-
-- [ ] **任务 A** `高优`
-  - 细节
-- [ ] **任务 B** `中优`
-
-### {较早日期}
-
-- [ ] **遗留任务** `高优`
+> Maintenance rules (keep unchanged)
 
 ---
 
-## 待跟进
+## Daily Work Reminders
 
-（非每日任务，长期跟进事项）
+### {latest date}
+
+- [ ] **Task A** `High`
+  - Details
+- [ ] **Task B** `Medium`
+
+### {earlier date}
+
+- [ ] **Leftover task** `High`
+
+---
+
+## Ongoing Follow-ups
+
+(Non-daily tasks; long-term tracking items)
 
 ---
 ```
 
-**关键约束**：
-- `## 每日工作提醒` 下只保留**活跃的、未完成的**任务
-- 已完成任务在归档后从此区域移除
-- `## 待跟进` 保留长期事项，不受每日归档影响
+**Key constraints**:
+- Under `## Daily Work Reminders`, keep only **active, uncompleted** tasks
+- Completed tasks are removed from this section after archiving
+- `## Ongoing Follow-ups` retains long-term items and is not subject to daily archiving
 
 ---
 
-## 边界情况
+## Edge Cases
 
-| 场景 | 处理 |
-|------|------|
-| 用户没说优先级 | 根据语气推断；纯调研类默认中优，开发类默认高优 |
-| 用户一次说了多天的任务 | 按日期拆分到对应 section |
-| 任务跨天未完成 | 下次调用时触发遗留任务处理流程 |
-| REMINDERS.md 不存在 | 按结构规范创建新文件 |
-| 归档月份文件不存在 | 自动创建 |
-| 用户说"全部完成" | 将当天所有任务标记完成并归档 |
-| 同一天多次调用 | 识别为 Mode B（增删改查），不重复创建 section |
+| Scenario | Handling |
+|----------|----------|
+| User does not specify priority | Infer from tone; research tasks default to Medium, development tasks default to High |
+| User describes tasks spanning multiple days | Split into corresponding date sections |
+| Task not completed by end of day | Trigger leftover task handling on next invocation |
+| REMINDERS.md does not exist | Create a new file following the structure specification |
+| Archive month file does not exist | Create automatically |
+| User says "all done" | Mark all of today's tasks as complete and archive them |
+| Invoked multiple times on the same day | Treat as Mode B (CRUD); do not create duplicate date sections |

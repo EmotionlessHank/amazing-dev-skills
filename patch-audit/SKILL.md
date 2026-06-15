@@ -1,252 +1,252 @@
 ---
 name: patch-audit
-description: 补丁累积审计与重构。当用户说 "/patch-audit"、"补丁审计"、"是不是补丁叠补丁"、"review 今天的修改"、"检查补丁累积" 时触发。分析当前分支的 commit 历史，识别补丁叠补丁模式，给出重构建议或直接执行重构。
+description: Patch accumulation audit and refactoring. Triggers when the user says "/patch-audit", "patch audit", "is this patches on top of patches", "review today's changes", or "check patch accumulation". Analyzes the current branch's commit history, identifies patch-on-patch patterns, and provides refactoring recommendations or executes the refactor directly.
 version: 1.0.0
 ---
 
-# /patch-audit — 补丁累积审计与重构
+# /patch-audit — Patch Accumulation Audit and Refactoring
 
-分析当前功能分支的 commit 历史，识别"补丁叠补丁"的反模式（feat → fix → fix → fix...），评估是否需要整合重构为最优解。
-
----
-
-## 触发场景
-
-- 功能开发过程中多次 fix commit 修补同一区域
-- 用户感觉改动在打补丁而非根本解决问题
-- 分支上 fix commit 数量 >= feat commit 数量
+Analyze the current feature branch's commit history to identify "patch-on-patch" anti-patterns (feat → fix → fix → fix...) and evaluate whether a consolidating refactor to an optimal solution is warranted.
 
 ---
 
-## Phase 1: 收集分支历史
+## Trigger Scenarios
 
-### 1.1 确定分支范围
+- Multiple fix commits patching the same area during feature development
+- The user feels changes are patching symptoms rather than solving root causes
+- Fix commit count on the branch >= feat commit count
+
+---
+
+## Phase 1: Collect Branch History
+
+### 1.1 Determine Branch Scope
 
 ```bash
-# 当前分支名
+# Current branch name
 BRANCH=$(git branch --show-current)
 
-# 分支起点（与 main 的分叉点）
+# Branch divergence point (from main)
 BASE=$(git merge-base main HEAD)
 
-# 所有 commit（从旧到新）
+# All commits (oldest to newest)
 git log --oneline --reverse $BASE..HEAD
 ```
 
-### 1.2 统计 commit 类型
+### 1.2 Count Commit Types
 
-按 conventional commit 前缀分类：
+Classify by conventional commit prefix:
 
-| 类型 | 匹配模式 |
-|------|---------|
-| feat | `feat(` 或 `feat:` |
-| fix | `fix(` 或 `fix:` |
-| refactor | `refactor(` 或 `refactor:` |
-| chore | `chore(` 或 `chore:` |
-| 其他 | 不含标准前缀 |
+| Type | Match Pattern |
+|------|---------------|
+| feat | `feat(` or `feat:` |
+| fix | `fix(` or `fix:` |
+| refactor | `refactor(` or `refactor:` |
+| chore | `chore(` or `chore:` |
+| other | No standard prefix |
 
-### 1.3 识别文件热度
+### 1.3 Identify File Hotspots
 
 ```bash
-# 分支内每个文件的修改次数
+# Number of times each file was modified within the branch
 git log --name-only --pretty=format: $BASE..HEAD | sort | uniq -c | sort -rn
 ```
 
-**热点文件**：被 >= 3 个 commit 修改的文件，是补丁累积的高危区域。
+**Hotspot files**: Files modified by >= 3 commits are high-risk zones for patch accumulation.
 
-### 1.4 输出分支概览
+### 1.4 Output Branch Overview
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔍 补丁审计 — 分支概览
+🔍 Patch Audit — Branch Overview
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-分支: {branch_name}
-Commit 总数: {N}
+Branch: {branch_name}
+Total commits: {N}
   feat: {n} | fix: {n} | refactor: {n} | other: {n}
-补丁比率: {fix_count / total * 100}%
+Patch ratio: {fix_count / total * 100}%
 
-热点文件（被 >= 3 个 commit 修改）:
-  {file_path} — {N} 次修改
-  {file_path} — {N} 次修改
+Hotspot files (modified by >= 3 commits):
+  {file_path} — {N} modifications
+  {file_path} — {N} modifications
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-## Phase 2: 逐 commit 演化分析
+## Phase 2: Per-Commit Evolution Analysis
 
-对每个热点文件，按 commit 时间顺序追踪其演化：
+For each hotspot file, trace its evolution in commit chronological order:
 
-### 2.1 读取每个 commit 的 diff
+### 2.1 Read Each Commit's Diff
 
 ```bash
-# 对每个热点文件，查看每次 commit 的改动
+# For each hotspot file, view changes from each commit
 git log --reverse -p $BASE..HEAD -- {hot_file}
 ```
 
-### 2.2 识别补丁模式
+### 2.2 Identify Patch Patterns
 
-对每个热点文件的 commit 链，判断以下反模式：
+For the commit chain of each hotspot file, flag the following anti-patterns:
 
-| 反模式 | 特征 | 严重度 |
-|--------|------|--------|
-| **添加后立即修复** | feat 中加入的代码在下一个 fix 中被修改 | High |
-| **条件逐步追加** | 初始实现缺少边界处理，后续 fix 逐个补 if/else | High |
-| **样式反复调整** | 同一元素的 className/style 被多次修改 | Medium |
-| **逻辑翻转** | 先加逻辑 A，后来删 A 改成 B | High |
-| **防御性补丁** | 仅为特定场景加 guard（如 `if (isPC) return`） | Medium |
-| **状态管理摇摆** | 状态变量加了又删、改了又改 | High |
+| Anti-Pattern | Characteristics | Severity |
+|--------------|-----------------|----------|
+| **Add then immediately fix** | Code added in a feat commit is modified in the very next fix | High |
+| **Incremental condition appending** | Initial implementation lacks boundary handling; subsequent fixes add if/else one by one | High |
+| **Repeated style adjustments** | The same element's className/style is modified multiple times | Medium |
+| **Logic reversal** | Logic A is added, then later removed and replaced with B | High |
+| **Defensive patching** | Guards added for a specific scenario only (e.g., `if (isPC) return`) | Medium |
+| **State management oscillation** | State variables added, removed, changed repeatedly | High |
 
-### 2.3 输出演化分析
+### 2.3 Output Evolution Analysis
 
-对每个热点文件输出：
+For each hotspot file:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 {file_path}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-修改次数: {N} 次（{commit_list}）
+Modifications: {N} times ({commit_list})
 
-演化链:
-  1. {commit_hash} feat: {描述} — 初始实现
-  2. {commit_hash} fix: {描述} — {补丁分析}
-  3. {commit_hash} fix: {描述} — {补丁分析}
+Evolution chain:
+  1. {commit_hash} feat: {description} — initial implementation
+  2. {commit_hash} fix: {description} — {patch analysis}
+  3. {commit_hash} fix: {description} — {patch analysis}
 
-检测到的反模式:
-  🔴 {反模式名称}: {具体说明}
-  🟡 {反模式名称}: {具体说明}
+Detected anti-patterns:
+  🔴 {anti-pattern name}: {specific description}
+  🟡 {anti-pattern name}: {specific description}
 ```
 
 ---
 
-## Phase 3: 综合评估
+## Phase 3: Comprehensive Assessment
 
-### 3.1 补丁累积评分
+### 3.1 Patch Accumulation Score
 
-根据 Phase 2 的发现给出综合评分：
+Provide an overall score based on Phase 2 findings:
 
-| 评分 | 判定 | 建议 |
-|------|------|------|
-| 🟢 低（0-2 个 Medium） | 正常迭代 | 无需重构，可直接合并 |
-| 🟡 中（1-2 个 High 或 3+ Medium） | 轻度补丁 | 建议合并前整理，但不阻断 |
-| 🔴 高（3+ High） | 严重补丁累积 | 强烈建议重构后再合并 |
+| Score | Verdict | Recommendation |
+|-------|---------|----------------|
+| 🟢 Low (0–2 Medium) | Normal iteration | No refactoring needed; safe to merge |
+| 🟡 Medium (1–2 High or 3+ Medium) | Mild patch accumulation | Tidy up before merging, but not a blocker |
+| 🔴 High (3+ High) | Severe patch accumulation | Strongly recommend refactoring before merging |
 
-### 3.2 输出评估结论
+### 3.2 Output Assessment Conclusion
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 补丁累积评估
+📊 Patch Accumulation Assessment
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-补丁比率: {fix_count}/{total_count} = {percentage}%
-热点文件: {N} 个
-反模式:
-  🔴 High: {N} 个
-  🟡 Medium: {N} 个
+Patch ratio: {fix_count}/{total_count} = {percentage}%
+Hotspot files: {N}
+Anti-patterns:
+  🔴 High: {N}
+  🟡 Medium: {N}
 
-综合评分: 🟢/🟡/🔴 {评分说明}
+Overall score: 🟢/🟡/🔴 {score explanation}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-## Phase 4: 重构方案（仅 🟡/🔴 时触发）
+## Phase 4: Refactoring Plan (triggered only for 🟡/🔴)
 
-### 4.1 生成重构方案
+### 4.1 Generate Refactoring Plan
 
-对每个需要重构的热点文件：
+For each hotspot file requiring refactoring:
 
-1. **读取文件当前最终状态**（`Read` 工具）
-2. **对比"如果从零写，最优实现是什么"**
-3. **列出具体重构项**：
-   - 哪些 guard/条件可以合并或提前到更合适的位置
-   - 哪些状态逻辑可以简化
-   - 哪些样式/className 可以收敛
-   - 哪些分散的逻辑可以抽成函数/hook
+1. **Read the file's current final state** (via `Read` tool)
+2. **Compare against "what would the optimal implementation look like if written from scratch"**
+3. **List specific refactoring items**:
+   - Which guards/conditions can be merged or moved to a more appropriate location
+   - Which state logic can be simplified
+   - Which styles/classNames can be consolidated
+   - Which scattered logic can be extracted into functions/hooks
 
-输出格式：
+Output format:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛠️ 重构方案
+🛠️ Refactoring Plan
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📄 {file_path}
-  问题: {补丁遗留的具体问题}
-  方案: {重构思路}
-  预期: {重构后的效果}
+  Problem: {specific issues left by patches}
+  Plan: {refactoring approach}
+  Expected outcome: {result after refactoring}
 
 📄 {file_path}
-  问题: {补丁遗留的具体问题}
-  方案: {重构思路}
-  预期: {重构后的效果}
+  Problem: {specific issues left by patches}
+  Plan: {refactoring approach}
+  Expected outcome: {result after refactoring}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### 4.2 确认门控 ⛔
+### 4.2 Confirmation Gate ⛔
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏸️ 确认门控
+⏸️ Confirmation Gate
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-以上重构方案需确认后执行。
-请回复:
-  "重构" — 全部执行
-  "重构 {file}" — 仅重构指定文件
-  "跳过" — 不重构，保持现状
-⛔ 在收到确认前，不会修改代码。
+The refactoring plan above requires confirmation before execution.
+Please reply:
+  "refactor"        — execute everything
+  "refactor {file}" — refactor only the specified file
+  "skip"            — skip refactoring, keep as-is
+⛔ No code will be modified until confirmation is received.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### 4.3 执行重构
+### 4.3 Execute Refactoring
 
-收到确认后：
+After receiving confirmation:
 
-1. **逐文件重构**，每个文件修改后：
-   - 运行 `pnpm type-check` 确认无类型错误
-   - 浏览器截图验证 UI 无回归（如果是可视组件）
-2. **重构完成后提交一个整合 commit**：
+1. **Refactor file by file** — after each file:
+   - Run `pnpm type-check` to confirm no type errors
+   - Take a browser screenshot to verify no UI regressions (for visual components)
+2. **Commit a single consolidating commit after all refactoring is done**:
    ```
-   refactor({scope}): 整合 {N} 个补丁为最优实现
+   refactor({scope}): consolidate {N} patches into optimal implementation
    ```
-3. **输出对比摘要**
+3. **Output comparison summary**
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ 重构完成
+✅ Refactoring Complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-重构文件: {N} 个
-代码行数: {before} → {after}（{diff}）
-消除反模式: {N} 个
+Files refactored: {N}
+Line count: {before} → {after} ({diff})
+Anti-patterns eliminated: {N}
 Commit: {hash} {message}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-## 可选参数
+## Optional Parameters
 
-| 参数 | 说明 |
-|------|------|
-| `--report-only` | 仅输出分析报告，不生成重构方案 |
-| `--auto-refactor` | 跳过确认门控，直接执行重构 |
-| `--file <path>` | 仅分析指定文件的补丁历史 |
-| `--since <date>` | 仅分析指定日期之后的 commit（默认分析整个分支） |
-
----
-
-## 与其他 Skill 的关系
-
-| Skill | 关系 |
-|-------|------|
-| `/quality-scan` | 检查代码规范违规；patch-audit 检查 commit 演化质量 |
-| `/enh-review` | 管理长期技术债；patch-audit 聚焦当前分支的短期补丁 |
-| `simplify` | 通用代码简化；patch-audit 基于 git 历史做针对性整合 |
+| Parameter | Description |
+|-----------|-------------|
+| `--report-only` | Output analysis report only; do not generate a refactoring plan |
+| `--auto-refactor` | Skip the confirmation gate and execute refactoring immediately |
+| `--file <path>` | Analyze patch history for the specified file only |
+| `--since <date>` | Analyze only commits after the specified date (default: entire branch) |
 
 ---
 
-## 注意事项
+## Relationship to Other Skills
 
-- **不修改 git 历史**：不做 rebase/squash 已有 commit，只在最终追加一个 refactor commit
-- **保持功能不变**：重构只改内部实现，不改外部行为
-- **尊重 Figma 打磨**：已按 Figma 对齐的 UI 结构不动，只整理逻辑和状态
-- **遵守文件限制**：单次重构不超过 3 个文件（CLAUDE.md 规则），超出则拆分批次
+| Skill | Relationship |
+|-------|-------------|
+| `/quality-scan` | Checks code style violations; patch-audit checks commit evolution quality |
+| `/enh-review` | Manages long-term technical debt; patch-audit focuses on short-term patches in the current branch |
+| `simplify` | General code simplification; patch-audit performs targeted consolidation based on git history |
+
+---
+
+## Notes
+
+- **Do not modify git history**: No rebasing/squashing of existing commits; only append a final refactor commit
+- **Preserve external behavior**: Refactoring only changes internal implementation, not external behavior
+- **Respect Figma-aligned UI**: Do not touch UI structure already aligned to Figma; only clean up logic and state
+- **Respect file limits**: No more than 3 files per refactoring pass (per CLAUDE.md rules); split into batches if exceeded

@@ -1,97 +1,97 @@
 ---
 name: headless-web-deploy
-description: 把一个小型 Web 应用（Flask/FastAPI/Node/静态站）部署到无域名的无头服务器（AWS Lightsail / EC2 / VPS），用 Caddy + sslip.io 自动签 Let's Encrypt 证书、systemd 常驻、HMAC token 鉴权，最终给一条可在手机/Telegram 内置浏览器打开的 HTTPS 链接。当用户说「部署到服务器」「上线网页」「sslip.io」「Caddy 反代」「免域名 HTTPS」「驾驶舱/看板上服务器」时触发。
+description: Deploy a small web application (Flask/FastAPI/Node/static site) to a headless server without a domain (AWS Lightsail / EC2 / VPS), using Caddy + sslip.io for automatic Let's Encrypt certificates, systemd persistence, and HMAC token authentication — delivering a single HTTPS link openable in a phone browser or Telegram's in-app browser. Triggers when the user says "deploy to server", "publish a web page", "sslip.io", "Caddy reverse proxy", "domain-free HTTPS", or "dashboard on server".
 version: 1.0.0
 author: Hank
 triggers:
-  - 部署网页到服务器
-  - web 应用上线
-  - 免域名 https 部署
+  - deploy web app to server
+  - publish web application
+  - domain-free https deployment
   - sslip.io
-  - caddy 反代
-  - 部署驾驶舱
+  - caddy reverse proxy
+  - deploy dashboard
   - /headless-web-deploy
 ---
 
-# headless-web-deploy — 无域名 Web 应用一键上线
+# headless-web-deploy — Domain-Free Web App One-Command Deployment
 
-把本地跑通的小型 Web 应用部署到无头服务器，对外只暴露一条 **带 token 的 HTTPS 链接**，手机/Telegram 内置浏览器可直接打开。
+Deploy a locally working small web application to a headless server, exposing only a single **HTTPS link with a token** to the outside world — directly openable in a phone browser or Telegram's in-app browser.
 
-## 适用场景
+## Use Cases
 
-- 个人项目，**没有/不想用域名**，要能 HTTPS（Telegram、iOS Safari 拒绝自签证书，必须有效证书）。
-- 服务器无头（Lightsail / EC2 / VPS），有 `ssh` 别名直连 + `sudo`。
-- 应用是单进程 HTTP 服务（Flask/FastAPI/Express/静态），监听 localhost 某端口即可。
-- 数据敏感（财务/私人）→ 不能裸奔公网 → 用 URL token 兜底（无 token → 403）。
+- Personal project, **no domain / don't want one**, but needs HTTPS (Telegram and iOS Safari reject self-signed certificates — a valid CA-signed cert is required).
+- Headless server (Lightsail / EC2 / VPS) with an `ssh` alias and `sudo` access.
+- Application is a single-process HTTP service (Flask/FastAPI/Express/static), listening on localhost at some port.
+- Data is sensitive (financial/personal) → cannot expose bare to the internet → URL token as the security layer (no token → 403).
 
-## 架构（确定方案，照搬即可）
+## Architecture (established approach — copy as-is)
 
 ```
-手机/TG 内置浏览器
-   │ HTTPS  https://<ip-用连字符>.sslip.io/<path>?token=…
+Phone / Telegram in-app browser
+   │ HTTPS  https://<ip-with-hyphens>.sslip.io/<path>?token=…
    ▼
-[云防火墙 :80 :443]            ← 唯一公网暴露，多数云厂商要在控制台单独开
+[Cloud firewall :80 :443]            ← only public exposure; most cloud providers require this to be opened in the console
    ▼
-Caddy（系统服务，自动 Let's Encrypt，sslip.io 域）
+Caddy (system service, auto Let's Encrypt, sslip.io domain)
    │ reverse_proxy 127.0.0.1:<APP_PORT>
    ▼
-App（systemd user 服务，仅监听 127.0.0.1）── 读写 ── 数据文件/DB
+App (systemd user service, listens on 127.0.0.1 only) ── read/write ── data files/DB
 ```
 
-**为什么这么分**：Caddy 要绑特权端口 80/443 + 管证书 → 系统服务最稳；App 不碰特权端口 → systemd **user** 服务，免 root、隔离。sslip.io 把 IP 编进域名（`52-77-48-244.sslip.io` 解析回 `52.77.48.244`），**免域名、免费、URL 固定**。
+**Why this split**: Caddy needs privileged ports 80/443 + certificate management → system service is most stable; the app doesn't touch privileged ports → systemd **user** service, no root required, isolated. sslip.io encodes the IP into a domain name (`52-77-48-244.sslip.io` resolves to `52.77.48.244`) — **no domain, free, fixed URL**.
 
-## 三条铁律（信源审计后的取舍）
+## Three Iron Rules (trade-offs after source audit)
 
-1. **「免费 + 免开端口 + 固定 URL」不可能三角，只能选两个**：
-   - sslip.io + Caddy = 免费 + 固定 URL，**要开端口**（本方案）。
-   - Cloudflare Tunnel = 免开端口 + 固定 URL，**需自有域名**。
-   - trycloudflare 临时隧道 = 免费 + 免开端口，**URL 每次变**。
-2. **Telegram/iOS 拒自签证书** → 必须 Let's Encrypt 等公信 CA（Caddy 自动搞定，别手搓自签）。
-3. **敏感数据靠 token 不靠锁 IP**：手机 IP 漂移、ACME 校验 IP 不固定，锁源 IP 会同时锁死用户和签证书。安全=token 鉴权 + 仅暴露 80/443 + 应用只监听 localhost。
+1. **"Free + no port exposure + fixed URL" is an impossible triangle — pick two**:
+   - sslip.io + Caddy = free + fixed URL, **requires open ports** (this approach).
+   - Cloudflare Tunnel = no open ports + fixed URL, **requires your own domain**.
+   - trycloudflare temporary tunnel = free + no open ports, **URL changes every time**.
+2. **Telegram/iOS rejects self-signed certificates** → must use Let's Encrypt or another public CA (Caddy handles this automatically — don't hand-roll a self-signed cert).
+3. **Sensitive data: secure with tokens, not IP locking**: mobile IPs roam, ACME validation IPs vary — locking source IPs will simultaneously lock out users and block certificate issuance. Security = token auth + expose only 80/443 + app listens on localhost only.
 
-## 执行流程
+## Execution Flow
 
-> 先读 `references/RUNBOOK.template.md` 拿可照抄的命令；按你的应用填变量。分两阶段，Phase A 全内部可回滚，Phase B 才碰公网。
+> Read `references/RUNBOOK.template.md` first for copy-pasteable commands; fill in variables for your application. Two phases: Phase A is fully internal and reversible; Phase B touches the public internet.
 
-### 变量先确认
-`SSH`（ssh 别名）、`APP_DIR`、`APP_PORT`、`RUN_CMD`（启动命令）、`DOMAIN=<ip 连字符>.sslip.io`、是否要 token 鉴权、数据文件路径。
+### Confirm Variables First
+`SSH` (ssh alias), `APP_DIR`, `APP_PORT`, `RUN_CMD` (start command), `DOMAIN=<ip-with-hyphens>.sslip.io`, whether token auth is needed, data file paths.
 
-### Phase A — 服务器内部署（不开端口）
-1. 建目录骨架；**逐文件 scp**（禁 `scp -r` 整目录覆盖，会清掉服务器上你本地没有的文件）。
-2. 装运行时（Python 注意 `python3-venv` 常缺，见踩坑）；建 venv / `npm ci`。
-3. **服务器现生成密钥**：`openssl rand -hex 32` → `.env`（`chmod 600`），**永不进 git / 不打印到对话**。
-4. 写 systemd **user** unit（`references/app.service.template`），`enable --now`，**只监听 127.0.0.1**。
-5. 本地验证：`curl 127.0.0.1:<PORT>/healthz`、无 token→403、带 token→200。
+### Phase A — Server-Side Deployment (ports closed)
+1. Create directory skeleton; **scp files individually** (never `scp -r` whole directories — it will wipe files on the server that don't exist locally).
+2. Install runtime (Python: `python3-venv` is often missing — see gotchas); create venv / `npm ci`.
+3. **Generate secrets on the server**: `openssl rand -hex 32` → `.env` (`chmod 600`). **Never put secrets in git / never print to the conversation**.
+4. Write systemd **user** unit (`references/app.service.template`), `enable --now`, **listen on 127.0.0.1 only**.
+5. Local verification: `curl 127.0.0.1:<PORT>/healthz`, no token → 403, with token → 200.
 
-### Phase B — 开端口 + Caddy HTTPS（碰公网，先跟用户确认）
-0. 🔴 **让用户在云控制台开 80 + 443 TCP**（云防火墙独立于 OS ufw；Source 选 **Any IPv4**，别选 Custom IP）。Agent 一般无云厂商凭据，这步交用户。
-1. 装 Caddy（apt 官方源，见 RUNBOOK）。
-2. 写 `/etc/caddy/Caddyfile`（`references/Caddyfile.template`）→ `reload caddy`。
-3. 等 ACME 签发（~10s），查 `journalctl -u caddy | grep "certificate obtained"`；Mac 侧 `curl https://$DOMAIN/healthz` 期望 200 + TLS verify=0。
-4. 生成带 token 完整链接（**服务器侧生成、不打印 token 到对话**，通过 IM 直接发用户）。
+### Phase B — Open Ports + Caddy HTTPS (touches public internet — confirm with user first)
+0. 🔴 **Have the user open ports 80 + 443 TCP in the cloud console** (cloud firewall is separate from OS ufw; set Source to **Any IPv4**, not a Custom IP). Agent generally has no cloud provider credentials — delegate this step to the user.
+1. Install Caddy (from official apt source, see RUNBOOK).
+2. Write `/etc/caddy/Caddyfile` (`references/Caddyfile.template`) → `reload caddy`.
+3. Wait for ACME certificate issuance (~10s), check `journalctl -u caddy | grep "certificate obtained"`; from Mac: `curl https://$DOMAIN/healthz` expecting 200 + TLS verify=0.
+4. Generate the full link with token (**generate on server side — do not print the token to the conversation**; send to user directly via IM).
 
-### 收尾
-- 回滚表（每个组件怎么撤）写进交付文档。
-- 若是 **Hermes skill 配套**：改 skill 后必须 `hermes gateway restart`（运行期不热更新）。
+### Wrap-Up
+- Write a rollback table (how to undo each component) into the delivery document.
+- If this is a **Hermes skill integration**: after modifying the skill, run `hermes gateway restart` (runtime does not hot-reload).
 
-## 实测踩坑（照此避坑）
+## Tested Gotchas (follow these to avoid pain)
 
-- **`python3-venv` 缺**：Ubuntu 22.04 默认无 `ensurepip`，`python3 -m venv` 失败 → 先 `sudo apt-get install -y python3.10-venv`（版本号对应 `python3 --version`）。
-- **云防火墙 ≠ OS 防火墙**：`ufw` 可能 inactive 也连不上——Lightsail/EC2 的**云安全组/防火墙**要在控制台单独开 80/443。开完 `nc -vz <ip> 443`：`Connection refused`=端口通但没服务（正常，起 Caddy 后变通）；`timed out`=云防火墙还没开。
-- **Source IP 别填 Custom**：默认想锁 IP 反而锁死手机 + ACME 校验，选 **Any IPv4**。
-- **scp 逐文件**：`scp -r 整目录` / `rsync --delete` 会清空服务器上本地缺失的文件，只更新要改的。
-- **app 要认环境变量指定数据路径**（如 `BTC_STATE`）：多个组件共享同一份数据文件时，别让某个组件写死相对路径。
-- **token 是访问凭据**：生成、注入、验证全在服务器侧做，只回报 HTTP 状态码；完整链接通过 IM 私发用户，不落聊天记录/日志/git。
+- **`python3-venv` missing**: Ubuntu 22.04 doesn't ship `ensurepip` by default; `python3 -m venv` will fail → first run `sudo apt-get install -y python3.10-venv` (match the version number to `python3 --version`).
+- **Cloud firewall ≠ OS firewall**: `ufw` may be inactive and you still can't connect — Lightsail/EC2's **cloud security group / firewall** must be opened separately in the console. After opening, `nc -vz <ip> 443`: `Connection refused` = port is reachable but no service yet (normal, will change once Caddy starts); `timed out` = cloud firewall still not open.
+- **Don't set Source IP to Custom**: trying to lock the IP will lock out your phone + ACME validation. Use **Any IPv4**.
+- **scp file by file**: `scp -r whole-directory` / `rsync --delete` will delete files on the server that don't exist locally. Only update what needs changing.
+- **App must read data paths from environment variables** (e.g., `BTC_STATE`): when multiple components share the same data file, don't let any component hardcode a relative path.
+- **Token is an access credential**: generate, inject, and validate entirely on the server side; only report back the HTTP status code. Send the full link to the user via IM — never let it appear in chat history / logs / git.
 
-## 参考文件（references/）
+## Reference Files (references/)
 
-- `RUNBOOK.template.md` — 可照抄的逐步命令（含回滚表）。
-- `Caddyfile.template` — sslip.io 反代最小配置。
-- `app.service.template` — systemd user 服务模板。
-- `token_auth.py` — HMAC 派生 token 的最小鉴权片段（Flask）。
+- `RUNBOOK.template.md` — step-by-step copy-pasteable commands (with rollback table).
+- `Caddyfile.template` — minimal sslip.io reverse proxy config.
+- `app.service.template` — systemd user service template.
+- `token_auth.py` — minimal HMAC-derived token auth snippet (Flask).
 
-## 安全红线
+## Security Red Lines
 
-- 密钥服务器现生成、`600`、不进 git/对话/日志。
-- 应用只监听 `127.0.0.1`，公网只走 Caddy 的 80/443。
-- 碰公网（开端口）前显式跟用户确认——不可逆的对外暴露。
+- Secrets generated on the server, `chmod 600`, never in git/conversation/logs.
+- Application listens on `127.0.0.1` only; public internet sees only Caddy's 80/443.
+- Explicitly confirm with the user before touching the public internet (opening ports) — this exposure is irreversible.

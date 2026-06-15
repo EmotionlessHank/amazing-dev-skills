@@ -1,163 +1,163 @@
 ---
 name: ui-design-plan
-description: UI 设计方案制定 prompt 优化器。当用户说 "/ui-design-plan"、"UI 设计方案"、"设计稿方案"、"UI 设计 prompt"、"制定 UI 方案"、"设计方案制定" 时触发。读取 PRD，调研竞品，结合项目设计系统，输出结构化的 UI 设计方案 DAG 执行计划。
+description: UI design plan prompt optimizer. Triggers on "/ui-design-plan", "UI design plan", "design spec plan", "UI design prompt", "create UI plan", or "design plan". Reads the PRD, researches competitors, analyzes the project design system, and outputs a structured UI design plan as a DAG execution schedule.
 user_invocable: true
 ---
 
-# UI Design Plan — UI 设计方案制定 Prompt 优化器
+# UI Design Plan — UI Design Prompt Optimizer
 
-## 定位
+## Purpose
 
-将用户模糊的 "帮我做 UI 设计方案" 需求，转化为结构化、可执行的 DAG 设计流水线。
-本 Skill 是 **prompt optimizer**，不直接产出设计稿，而是产出一份可被 ultrawork/team 执行的完整计划。
+Transforms a vague "help me create a UI design plan" request into a structured, executable DAG design pipeline.
+This skill is a **prompt optimizer** — it does not produce design artifacts directly; it produces a complete plan that can be executed by ultrawork/team.
 
-## 触发条件
+## Trigger Conditions
 
-用户说 `/ui-design-plan`、"UI 设计方案"、"设计稿方案"、"制定 UI 方案"、"设计方案制定"。
+User says `/ui-design-plan`, "UI design plan", "design spec plan", "create UI plan", or "design plan".
 
 ---
 
-## 执行流程
+## Execution Workflow
 
-### Phase 0：需求理解（必须先完成）
+### Phase 0: Requirements Understanding (Must complete first)
 
-1. **定位 PRD 文档**：在 `documents/需求文档/` 下搜索与用户描述匹配的 PRD 文件
-2. **读取 PRD**：提取以下关键信息：
-   - 功能列表 + 优先级
-   - 页面布局描述
-   - 元素说明表（展示规则 / 交互逻辑 / 异常情况）
-   - 竞品参考 URL（PRD 中指定的）
-   - 非功能需求（性能 / 响应式 / 国际化）
-3. **读取关联需求**：如果 PRD 中提到关联需求文档，一并读取
-4. **如果没有 PRD**：询问用户提供需求描述或指定文档路径，不凭空猜测
+1. **Locate the PRD**: Search `documents/需求文档/` for a PRD matching the user's description
+2. **Read the PRD**: Extract the following key information:
+   - Feature list + priorities
+   - Page layout descriptions
+   - Element specification tables (display rules / interaction logic / edge cases)
+   - Competitor reference URLs (as specified in the PRD)
+   - Non-functional requirements (performance / responsiveness / internationalization)
+3. **Read linked requirements**: If the PRD references other requirement documents, read those too
+4. **If no PRD exists**: Ask the user to provide a requirements description or specify a document path — do not make assumptions
 
-### Phase 1：竞品清单构建
+### Phase 1: Competitor List Construction
 
-基于 PRD 中指定的竞品 + AI 补充同赛道竞品，构建 **5 个左右**的竞品列表：
+Based on competitors specified in the PRD plus AI-supplemented same-category competitors, build a list of **approximately 5** competitors:
 
 ```markdown
-| # | 竞品 | URL | 选择理由 |
-|---|------|-----|---------|
-| 1 | XXX  | ... | PRD 指定参考 |
-| 2 | YYY  | ... | 同赛道头部产品，XX 功能做得好 |
+| # | Competitor | URL | Rationale |
+|---|------------|-----|-----------|
+| 1 | XXX        | ... | Specified in PRD |
+| 2 | YYY        | ... | Market leader in the same space; strong at XX feature |
 | ...
 ```
 
-**补充竞品的选择原则**：
-- 优先同赛道（如 AI 视频 → Pika/Runway/Kling）
-- 次选同模式（如瀑布流社区 → Dribbble/Behance/Pinterest）
-- 避免过度发散，最多 5-6 个
+**Principles for selecting supplemental competitors**:
+- Prefer same category (e.g. AI video → Pika/Runway/Kling)
+- Secondary: same model/pattern (e.g. masonry community → Dribbble/Behance/Pinterest)
+- Avoid scope creep; maximum 5–6 total
 
-**竞品提取维度**（固定 7 维度）：
+**Competitor analysis dimensions** (fixed 7 dimensions):
 
-| 维度 | 提取内容 |
-|------|---------|
-| 1. 页面布局结构 | Banner vs 内容区的比例、层次、视觉权重分配 |
-| 2. 卡片视觉处理 | 圆角、间距、阴影、hover 效果、纵横比策略 |
-| 3. 卡片信息层级 | 标签/用户信息/互动按钮的位置、字号、层叠关系 |
-| 4. 媒体预览交互 | hover 播放、自动播放、预加载策略 |
-| 5. CTA 区域表现 | 背景处理、字体层级、按钮样式、视觉吸引力 |
-| 6. 状态设计 | 空状态/加载态/错误态/骨架屏的处理方式 |
-| 7. 响应式策略 | 断点设置、列数变化、间距缩放规则 |
+| Dimension | What to extract |
+|-----------|----------------|
+| 1. Page layout structure | Banner-to-content ratio, hierarchy, visual weight distribution |
+| 2. Card visual treatment | Corner radius, spacing, shadows, hover effects, aspect ratio strategy |
+| 3. Card information hierarchy | Position, font size, and stacking of tags / user info / action buttons |
+| 4. Media preview interaction | Hover-to-play, autoplay, preload strategy |
+| 5. CTA area presentation | Background treatment, typography hierarchy, button style, visual appeal |
+| 6. State design | Empty / loading / error / skeleton screen handling |
+| 7. Responsive strategy | Breakpoints, column count changes, spacing scaling rules |
 
-### Phase 2：项目设计系统分析
+### Phase 2: Project Design System Analysis
 
-读取项目中以下文件，提取可复用资产：
+Read the following project files and extract reusable assets:
 
-| 文件 | 提取内容 |
-|------|---------|
-| CSS 变量文件（如 `base.scss`） | 颜色变量、间距系统、字体系统 |
-| 主题变量文件（如 `element-variables.scss`） | 组件库主题定制 |
-| Tailwind 配置 | 断点、扩展配置、自定义值 |
-| 现有相似组件 | 卡片组件、列表组件的视觉模式 |
-| 现有布局实现 | 瀑布流/网格布局方案 |
-| `RES-000-reusable-assets.md` | 已有可复用资产清单 |
+| File | What to extract |
+|------|----------------|
+| CSS variable file (e.g. `base.scss`) | Color variables, spacing system, typography system |
+| Theme variable file (e.g. `element-variables.scss`) | Component library theme customizations |
+| Tailwind config | Breakpoints, extended config, custom values |
+| Existing similar components | Visual patterns from card and list components |
+| Existing layout implementations | Masonry / grid layout approaches |
+| `RES-000-reusable-assets.md` | Existing reusable asset inventory |
 
-> 如果项目中没有某些文件，跳过即可，不报错。
+> If any of these files don't exist in the project, skip them without error.
 
-### Phase 3：组装输出 — 结构化设计 Prompt
+### Phase 3: Assemble Output — Structured Design Prompt
 
-将 Phase 0-2 的结果组装为**结构化的 DAG 执行计划**，格式如下：
+Combine the results from Phases 0–2 into a **structured DAG execution plan** using the following format:
 
 ```markdown
-## {功能名称} — UI 设计方案制定
+## {Feature Name} — UI Design Plan
 
-### 背景
-基于 PRD `{文件名}`，需要制定 UI 设计方案。
+### Background
+Based on PRD `{filename}`, a UI design plan is required.
 
-### 执行策略：`/omc ultrawork`（DAG 调度）
+### Execution strategy: `/omc ultrawork` (DAG scheduling)
 
-T1 竞品调研（N 个竞品并行截图+分析）     ← 可并行
-T2 项目设计系统分析                      ← 与 T1 并行
-T3 /ui-ux-pro-max 生成设计方向选项       ← 依赖 T1+T2
-T4 /design-with-claude 细粒度设计决策     ← 依赖 T3 确认后
-T5 输出 DD 设计文档                      ← 依赖 T4
-T6 /omc visual-verdict 视觉 QA          ← 依赖 T5 实现后
+T1 Competitor research (N competitors, screenshot + analysis in parallel)   ← parallel
+T2 Project design system analysis                                            ← parallel with T1
+T3 /ui-ux-pro-max generate design direction options                         ← depends on T1+T2
+T4 /design-with-claude granular design decisions                            ← depends on T3 confirmation
+T5 Output DD design document                                                ← depends on T4
+T6 /omc visual-verdict visual QA                                            ← depends on T5 implementation
 
-### T1：竞品调研（并行，chrome MCP headless）
+### T1: Competitor Research (parallel, chrome MCP headless)
 
-{竞品表格}
+{Competitor table}
 
-**提取维度**：{7 维度表格}
+**Extraction dimensions**: {7-dimension table}
 
-> 截图保存到 `.screenshots/{feature}-research/`，用完清理
+> Screenshots saved to `.screenshots/{feature}-research/`; clean up when done
 
-### T2：项目设计系统分析（与 T1 并行）
+### T2: Project Design System Analysis (parallel with T1)
 
-{从 Phase 2 提取的具体文件列表和分析目标}
+{Specific file list and analysis targets extracted from Phase 2}
 
-### T3：设计方向生成（依赖 T1+T2）
+### T3: Design Direction Generation (depends on T1+T2)
 
-调用 `/ui-ux-pro-max`，基于竞品调研结果 + 项目设计系统约束，
-生成 2-3 个设计方向选项，每个方向包含：
-- 整体视觉调性（参考了哪些竞品的哪些元素）
-- 色彩方案（基于项目现有 CSS 变量）
-- 核心组件风格 + 布局策略
+Call `/ui-ux-pro-max`, based on competitor research results + project design system constraints,
+generate 2–3 design direction options. Each direction includes:
+- Overall visual tone (which elements from which competitors were referenced)
+- Color scheme (based on existing project CSS variables)
+- Core component style + layout strategy
 
-**→ 等人类确认方向后再进入 T4**
+**→ Wait for human to confirm direction before proceeding to T4**
 
-### T4：细粒度设计决策（依赖 T3 确认）
+### T4: Granular Design Decisions (depends on T3 confirmation)
 
-调用 `/design-with-claude`，对确认的方向细化：
-1. 页面结构：{根据 PRD 页面布局描述定制}
-2. 核心组件规范：{根据 PRD 元素说明表定制}
-3. 响应式策略：各断点列数 + 间距规则
-4. 状态设计：{根据 PRD 异常情况定制}
-5. 颜色/字体：基于项目 CSS 变量的具体取值
-6. 可复用资产清单：哪些现有组件可直接用或微调
+Call `/design-with-claude` to refine the confirmed direction:
+1. Page structure: {customized based on PRD page layout descriptions}
+2. Core component specifications: {customized based on PRD element spec table}
+3. Responsive strategy: column counts + spacing rules per breakpoint
+4. State design: {customized based on PRD edge cases}
+5. Colors / typography: specific values based on project CSS variables
+6. Reusable asset inventory: which existing components can be used or lightly adapted
 
-### T5：输出 DD 设计文档
+### T5: Output DD Design Document
 
-保存到 `.progress/dev-docs/designs/DD-XXX-{feature}-ui.md`
+Save to `.progress/dev-docs/designs/DD-XXX-{feature}-ui.md`
 
-### T6：视觉 QA（依赖实现后）
+### T6: Visual QA (depends on implementation)
 
-调用 `/omc visual-verdict`，截图实现效果 vs 竞品对比，验证视觉质量
+Call `/omc visual-verdict` — screenshot implementation output vs competitor reference to verify visual quality
 ```
 
 ---
 
-## 关键约束
+## Key Constraints
 
-1. **不跳过 Phase 0**：没读 PRD 就不要开始编竞品列表，PRD 中可能已经指定了竞品和布局要求
-2. **竞品 URL 必须真实可访问**：不编造 URL，不确定的先用 chrome MCP headless 验证
-3. **设计系统文件路径必须验证**：用 Glob 确认文件存在，不硬编码路径
-4. **人类确认门禁在 T3**：设计方向确认前不进入细粒度设计，避免走偏返工
-5. **截图统一管理**：竞品截图存 `.screenshots/`，用完提醒清理
-6. **输出是 prompt 不是设计稿**：本 Skill 产出的是可执行的计划，不是最终设计
+1. **Never skip Phase 0**: Do not start building the competitor list without reading the PRD first — the PRD may already specify competitors and layout requirements
+2. **Competitor URLs must be real and accessible**: Do not fabricate URLs; verify uncertain ones with chrome MCP headless first
+3. **Validate design system file paths**: Confirm files exist with Glob before hardcoding paths
+4. **Human confirmation gate at T3**: Do not proceed to granular design before the direction is confirmed — avoids wasted effort from going off-track
+5. **Centralize screenshot management**: Save competitor screenshots to `.screenshots/`; remind to clean up when done
+6. **Output is a prompt, not a design artifact**: This skill produces an executable plan, not a final design
 
-## 成功标准
+## Success Criteria
 
-- [ ] PRD 关键信息已完整提取（功能列表、页面布局、元素说明、竞品参考）
-- [ ] 竞品列表 ≥ 3 个且包含 PRD 指定的参考
-- [ ] 7 维度提取表完整
-- [ ] 项目设计系统文件已定位并列出具体分析目标
-- [ ] DAG 依赖关系正确（T1/T2 并行 → T3 → 确认门禁 → T4 → T5 → T6）
-- [ ] 集成了 3 个设计 Skill（ui-ux-pro-max / design-with-claude / visual-verdict）
-- [ ] 输出格式可直接交给 `/omc ultrawork` 执行
+- [ ] PRD key information fully extracted (feature list, page layout, element specs, competitor references)
+- [ ] Competitor list has ≥ 3 entries and includes PRD-specified references
+- [ ] All 7 extraction dimensions are complete
+- [ ] Project design system files are located with specific analysis targets listed
+- [ ] DAG dependencies are correct (T1/T2 parallel → T3 → confirmation gate → T4 → T5 → T6)
+- [ ] 3 design skills integrated (ui-ux-pro-max / design-with-claude / visual-verdict)
+- [ ] Output format is directly executable by `/omc ultrawork`
 
-## 不适用场景
+## When Not to Use This Skill
 
-- 纯样式微调（直接改代码，不需要设计方案）
-- 已有设计稿只需还原（用 `/pencil-impl`）
-- 单组件设计（直接用 `/design-with-claude`）
+- Pure style tweaks (just edit the code directly, no design plan needed)
+- Design file already exists and only needs implementation (use `/pencil-impl`)
+- Single-component design (use `/design-with-claude` directly)

@@ -1,59 +1,59 @@
 ---
 name: today-summary
-description: 一键生成今日提交总结。当用户说 "/today-summary"、"今日总结"、"今天提交总结"、"today summary" 时触发。扫描当天 main 分支所有提交，按用户语言风格输出精简总结。
+description: Generate a concise summary of today's commits with one command. Triggers when the user says "/today-summary", "today's summary", "today's commit summary", or "today summary". Scans all commits to the main branch made today and outputs a clean, tightly formatted summary in the user's writing style.
 user_invocable: true
 ---
 
-# Today Summary — 今日提交总结
+# Today Summary — Daily Commit Summary
 
-## 触发条件
+## Trigger Conditions
 
-用户说 `/today-summary`、"今日总结"、"今天提交总结"、"today summary"。
+User says `/today-summary`, "today's summary", "today's commit summary", or "today summary".
 
-## 执行流程
+## Execution Flow
 
-1. 运行 `git log --oneline --since="$(date +%Y-%m-%d) 00:00:00" main` 获取今天 main 的所有提交
-2. 如果提交数 > 5，用 `git show <hash> --stat --format="%s%n%b"` 补充每个提交的详情
-3. 按下方风格规范输出总结
+1. Run `git log --oneline --since="$(date +%Y-%m-%d) 00:00:00" main` to get all of today's commits on main
+2. If there are more than 5 commits, use `git show <hash> --stat --format="%s%n%b"` to fetch details for each commit
+3. Output the summary following the style guidelines below
 
-## 风格规范（严格遵守）
+## Style Guidelines (strictly enforced)
 
-模仿用户的写作风格，特征如下：
+Mimic the user's writing style with the following characteristics:
 
-- **一条一行**，每条以 `- ` 开头
-- **按功能领域分组**，相关改动合并为一条，用分号 `；` 连接
-- **省略主语**，直接写动作+对象
-- **中文为主**，技术名词保留英文（H5/PC/Sentry/FAB/WAAPI 等）
-- **不写 commit hash**
-- **不写文件路径**
-- **不加时间戳**
-- **简洁到极致**：能用一个词不用一句话
+- **One item per line**, each starting with `- `
+- **Group by functional area**, consolidating related changes into one entry, joined by semicolons `;`
+- **Omit the subject** — write action + object directly
+- **English throughout**; keep technical terms as-is (H5/PC/Sentry/FAB/WAAPI, etc.)
+- **No commit hashes**
+- **No file paths**
+- **No timestamps**
+- **Maximum conciseness**: use one word where one word will do
 
-### 好的示例
-
-```
-- H5/PC 投注动效：飞行筹码、FAB 弹跳、面板脉冲、BetCard 入退场动画
-- 导航栏登录后头像+下拉箭头替代汉堡图标；修复用户菜单毛玻璃透明度被回滚问题
-- Sentry 过滤钱包注入脚本噪音，减少无效告警
-```
-
-### 坏的示例（不要这样）
+### Good examples
 
 ```
-- `5b3e53e` fix(sentry): 过滤钱包注入脚本噪音   ← 不要带 hash
-- 修复了 components/wallet/UserAvatarDropdown.tsx 的透明度   ← 不要带路径
-- 2026-04-04 13:15 提交了 Sentry 过滤   ← 不要带时间
-- 我今天完成了投注动效的全量实现   ← 不要加主语"我"
+- H5/PC betting animations: flying chips, FAB bounce, panel pulse, BetCard enter/exit transitions
+- Navbar: show avatar + dropdown arrow after login instead of hamburger icon; fix user menu frosted glass opacity regression
+- Sentry: filter out wallet injection script noise to reduce false alerts
 ```
 
-## 合并规则
+### Bad examples (avoid these)
 
-- 同一功能领域的多个 commit 合并为一条（如 3 个 betslip fix → 合并到投注动效那条）
-- 基础设施类（Sentry/CI/配置）单独一条
-- UI 修复如果和某功能相关就归入那条，独立的单独一条
+```
+- `5b3e53e` fix(sentry): filter wallet injection script noise   ← no hashes
+- Fixed opacity in components/wallet/UserAvatarDropdown.tsx   ← no file paths
+- 2026-04-04 13:15 committed Sentry filter   ← no timestamps
+- I completed the full betting animation implementation today   ← no subject "I"
+```
 
-## 输出格式
+## Merge Rules
 
-直接输出总结内容，不加标题、不加前言、不加"以下是总结"之类的废话。用户拿到就能直接复制。
+- Multiple commits in the same functional area merge into one entry (e.g., 3 betslip fixes → fold into the betting animation entry)
+- Infrastructure items (Sentry/CI/config) get their own entry
+- UI fixes related to a feature get folded into that feature's entry; standalone fixes get their own entry
 
-如果今天没有提交，输出：`今天 main 没有新提交。`
+## Output Format
+
+Output the summary directly — no title, no preamble, no "here is the summary" filler. The user should be able to copy it immediately.
+
+If there are no commits today, output: `No new commits to main today.`

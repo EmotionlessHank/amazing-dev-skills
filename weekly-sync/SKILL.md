@@ -1,83 +1,83 @@
-# Weekly Sync — 周工作同步报告生成
+# Weekly Sync — Weekly Work Summary Report Generator
 
-生成面向产品经理的周工作同步报告，适配 Lark 消息格式。当用户说 "/weekly-sync"、"周同步"、"周报"、"工作同步"、"sync report" 时触发。
+Generates a weekly work summary report for product managers, formatted for Lark messaging. Triggers when the user says "/weekly-sync", "weekly sync", "weekly report", "work summary", or "sync report".
 
-## 执行步骤
+## Execution Steps
 
-### Step 1: 确定时间范围
+### Step 1: Determine Time Range
 
-- 获取当前日期，推算「上周一 ~ 上周日」和「本周一 ~ 今天」的日期范围
-- 若用户指定了自定义时间范围，以用户为准
+- Get the current date and calculate the date ranges for "last Monday ~ last Sunday" and "this Monday ~ today"
+- If the user specifies a custom range, use that instead
 
-### Step 2: 采集 Git 数据
+### Step 2: Collect Git Data
 
-对所有分支（含 worktree）执行：
+Run against all branches (including worktrees):
 
 ```bash
-# 上周提交
-git log --all --after="{上周一}" --before="{本周一}" --format="%h %ad %s" --date=short
+# Last week's commits
+git log --all --after="{last Monday}" --before="{this Monday}" --format="%h %ad %s" --date=short
 
-# 本周提交
-git log --all --after="{上周日}" --format="%h %ad %s" --date=short
+# This week's commits
+git log --all --after="{last Sunday}" --format="%h %ad %s" --date=short
 ```
 
-### Step 3: 归纳分析
+### Step 3: Analyze and Categorize
 
-将 commit 按以下维度归纳（不是每个维度都必须出现，按实际内容取舍）：
+Group commits into the following categories (not all categories need to appear — include only what's relevant):
 
-- Web3 / 链上功能
-- UI 实现
-- 基础设施（i18n、部署、CI/CD、开发工具等）
-- API / 数据层
-- Bug 修复
-- 其他
+- Web3 / on-chain features
+- UI implementation
+- Infrastructure (i18n, deployment, CI/CD, dev tooling, etc.)
+- API / data layer
+- Bug fixes
+- Other
 
-**归纳原则**：
-- 合并同类项，一个功能多个 commit 合并为一条描述
-- 使用业务语言而非技术 commit message，产品经理能看懂
-- 突出交付成果（"已完成"、"已上线"），而非过程细节
+**Categorization principles**:
+- Consolidate related items: multiple commits for the same feature become a single description
+- Use business language rather than raw commit messages — product managers should be able to understand it
+- Emphasize delivered outcomes ("completed", "shipped") rather than implementation details
 
-### Step 4: 请求用户补充
+### Step 4: Request User Input
 
-生成初稿后，向用户确认：
+After generating the first draft, confirm with the user:
 
-1. **本周工作计划**：AI 无法自动获取计划，请用户补充本周待办事项及预计完成时间
-2. **需要的外部支持**：是否有需要产品/后端/设计协助的事项
-3. **内容修正**：上周总结是否有遗漏或需要调整的地方（如非代码工作：域名配置、会议对齐等）
+1. **This week's work plan**: AI cannot automatically retrieve planned items — ask the user to fill in this week's to-dos and estimated completion dates
+2. **External support needed**: any items requiring help from product, backend, or design
+3. **Content corrections**: any missing or incorrect items in last week's summary (e.g., non-code work such as domain configuration or alignment meetings)
 
-### Step 5: 生成最终报告
+### Step 5: Generate Final Report
 
-按以下固定格式输出，直接可复制到 Lark 发送：
+Output in the following fixed format, ready to paste directly into Lark:
 
 ```
-前端 — Hank
+Frontend — Hank
 
-一、上周工作内容
+I. Last Week's Work
 
-1. {主题 A}
-   - 具体事项 1
-   - 具体事项 2
+1. {Topic A}
+   - Item 1
+   - Item 2
 
-2. {主题 B}
-   - 具体事项 1
+2. {Topic B}
+   - Item 1
 
-二、本周工作计划
+II. This Week's Plan
 
-- 事项 1（预计完成时间）
-- 事项 2（预计完成时间）
-- 事项 3（持续推进）
+- Item 1 (estimated completion date)
+- Item 2 (estimated completion date)
+- Item 3 (ongoing)
 
-> 注：{阻塞说明，若有}
+> Note: {blocker description, if any}
 
-三、需要的外部支持
+III. External Support Needed
 
-- {支持事项及原因}
+- {support item and reason}
 ```
 
-## 格式约束
+## Format Constraints
 
-- **禁止使用 Table**：Lark 消息栏不方便输入表格，全部用无序列表
-- **禁止使用 Emoji**：保持专业简洁
-- **语言**：简体中文
-- **篇幅**：每个主题下 2-5 条，总体控制在一屏可读完
-- **加粗**：仅用于标题层级（一、二、三 + 主题序号），正文不加粗
+- **No tables**: Lark's message input does not render tables well; use unordered lists throughout
+- **No emojis**: keep it professional and clean
+- **Language**: English
+- **Length**: 2–5 bullet points per topic; the entire report should be readable in one screen
+- **Bold**: use only for section headings (I, II, III + topic numbers); no bold in body text

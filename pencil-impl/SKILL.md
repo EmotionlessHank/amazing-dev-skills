@@ -1,309 +1,309 @@
 ---
 name: pencil-impl
-description: Pencil 设计稿像素级还原强制流程。当用户说 "/pencil-impl"、"还原设计"、"按设计实现"、"像素还原"、"设计还原"、"pen 还原" 时触发。将 .pen 设计文件通过 6 步 SOP 结构化还原为 Vue 代码，每步设门控，杜绝跳步导致的返工。
+description: Enforced pixel-perfect implementation workflow for Pencil design files. Triggers on "/pencil-impl", "restore design", "implement from design", "pixel-perfect", "design implementation", or "pen restore". Converts .pen design files into Vue code via a 6-step SOP with gate checks at every step, eliminating rework caused by skipping steps.
 version: 1.0.0
 ---
 
-# /pencil-impl — Pencil 设计稿像素级还原强制流程
+# /pencil-impl — Pixel-Perfect Pencil Design Implementation
 
-将 .pen 设计文件通过结构化流程还原为 Vue 代码。每一步设门控，不完成不允许进入下一步。
+Converts .pen design files into Vue code through a structured workflow. Each step has a gate check — you cannot proceed to the next step until the current one is complete.
 
-**设计背景**：AI 跳过截图获取和视觉对比步骤是还原任务返工的首要根因。本 Skill 通过结构化流程消除跳步。
+**Design rationale**: Skipping screenshot capture and visual comparison is the leading root cause of rework in design implementation tasks. This skill eliminates step-skipping through a structured gate-controlled workflow.
 
-**核心原则**：.pen 文件内容加密，只能通过 Pencil MCP 工具读写，禁止用 Read/Grep 直接读取 .pen 文件。
-
----
-
-## 输入
-
-用户提供以下信息（缺少时主动询问）：
-
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| .pen 文件路径 | 是 | UIUX/ 目录下的设计文件（如 `UIUX/pricing-page.pen`） |
-| 目标节点名称或 ID | 否 | 要还原的具体 Frame/组件（不提供则列出顶层节点供选择） |
-| 目标文件路径 | 否 | 要修改/创建的 Vue 组件文件（可在 Step 1 后确定） |
-| 实现范围 | 否 | 单组件 / 整页（默认单组件，整页则自动拆分） |
+**Core principle**: .pen files are encrypted. They must be read and written exclusively through Pencil MCP tools. Never use Read/Grep directly on .pen files.
 
 ---
 
-## 前置动作（强制）
+## Inputs
 
-开始还原前必须执行：
+Collect the following from the user (ask if missing):
 
-1. 读取 `.progress/rewind-docs/LESSONS.md`，找到与当前任务相关的章节
-2. 读取 `.progress/dev-docs/research/RES-000-reusable-assets.md`，了解项目已有的可复用资产
-3. 读取 `UIUX/README.md` 和 `UIUX/DESIGN-PRACTICES.md`，了解设计规范
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| .pen file path | Yes | Design file under the `UIUX/` directory (e.g. `UIUX/pricing-page.pen`) |
+| Target node name or ID | No | The specific Frame/component to implement (if omitted, list top-level nodes for selection) |
+| Target file path | No | Vue component file to modify/create (can be determined after Step 1) |
+| Implementation scope | No | Single component / full page (default: single component; full page auto-splits into components) |
 
 ---
 
-## 整页拆分规则（强制）
+## Pre-flight Actions (Mandatory)
 
-如果用户给的节点是整个页面（而非单组件），**必须先拆分为组件列表**，逐个走完整 Cycle。
+Before starting implementation, you must:
+
+1. Read `.progress/rewind-docs/LESSONS.md` and find sections relevant to the current task
+2. Read `.progress/dev-docs/research/RES-000-reusable-assets.md` to understand existing reusable assets in the project
+3. Read `UIUX/README.md` and `UIUX/DESIGN-PRACTICES.md` to understand design conventions
+
+---
+
+## Full-Page Split Rules (Mandatory)
+
+If the user provides a full-page node (not a single component), **split it into a component list first**, then run through the full Cycle for each one individually.
 
 ```
-整页节点
-  → 用 batch_get 识别子组件边界（readDepth: 2）
-  → 拆分为 N 个独立组件/区块
-  → 列出实现顺序（从上到下、从外到内）
-  → 用户确认拆分方案
-  → 逐个组件执行下方 6 步 Cycle
+Full-page node
+  → Use batch_get to identify sub-component boundaries (readDepth: 2)
+  → Split into N independent components/sections
+  → List implementation order (top-to-bottom, outer-to-inner)
+  → User confirms the split plan
+  → Run the 6-step Cycle below for each component
 ```
 
-**禁止行为**：整页一次性实现完再截图对比。
+**Prohibited**: Implementing the entire page at once and only then comparing screenshots.
 
 ---
 
-## 6 步 Cycle（每个组件/区块执行一遍）
+## 6-Step Cycle (Run once per component/section)
 
-### Step 1: 节点确认 ⛔ 门控
+### Step 1: Node Confirmation ⛔ Gate
 
 ```
-操作:
-  1. 调用 batch_get({
+Actions:
+  1. Call batch_get({
        filePath: "UIUX/xxx.pen",
-       patterns: [{ name: "用户给的节点名" }],
+       patterns: [{ name: "<user-provided node name>" }],
        readDepth: 2,
        searchDepth: 3
-     }) 查看节点层级
-  2. 如果用户没指定节点，先不带 patterns 获取顶层节点列表供选择
-  3. 确认节点是最外层容器（Page → 顶层 Frame，Card → 最外层 frame）
-  4. 如果用户给的是子节点 → 主动往上找父容器并告知用户
+     }) to inspect node hierarchy
+  2. If the user did not specify a node, call without patterns first to list top-level nodes
+  3. Confirm the node is the outermost container (Page → top-level Frame, Card → outermost frame)
+  4. If the user gave a child node → proactively find its parent container and inform the user
 
-门控条件: 必须确认节点粒度正确后才能继续
-输出: "节点确认: {nodeId} — {节点名称}（{层级位置}）"
+Gate condition: Node granularity must be confirmed before continuing
+Output: "Node confirmed: {nodeId} — {node name} ({hierarchy position})"
 ```
 
-### Step 2: 获取设计数据 ⛔ 门控
+### Step 2: Fetch Design Data ⛔ Gate
 
 ```
-操作:
-  1. 调用 batch_get({
+Actions:
+  1. Call batch_get({
        filePath: "UIUX/xxx.pen",
-       nodeIds: [确认的 nodeId],
+       nodeIds: [confirmed nodeId],
        readDepth: 4,
        resolveVariables: true,
        resolveInstances: true
-     }) 获取完整节点树（含变量解析和组件展开）
+     }) to fetch the full node tree (with variable resolution and component expansion)
 
-  2. 调用 snapshot_layout({
+  2. Call snapshot_layout({
        filePath: "UIUX/xxx.pen",
        parentId: nodeId,
        maxDepth: 3
-     }) 获取布局结构（尺寸、位置、间距）
+     }) to get layout structure (dimensions, positions, spacing)
 
-  3. 调用 get_variables({
+  3. Call get_variables({
        filePath: "UIUX/xxx.pen"
-     }) 获取设计变量（颜色、字体等 Token）
+     }) to get design variables (color, typography tokens, etc.)
 
-  4. 如果节点内容过多（readDepth: 4 返回 "..."），分层读取子节点
+  4. If node data is too large (readDepth: 4 returns "..."), fetch child nodes in layers
 
-门控条件: 必须获取到完整的节点数据 + 布局数据 + 变量数据
-输出: 保存返回的结构化数据，标记所有设计 Token 和颜色值
+Gate condition: Must obtain complete node data + layout data + variable data
+Output: Save the returned structured data; tag all design tokens and color values
 ```
 
-### Step 3: 获取视觉基准 ⛔ 阻断门控（最关键）
+### Step 3: Capture Visual Baseline ⛔ Hard Block Gate (Most Critical)
 
 ```
-操作:
-  调用 export_nodes({
+Actions:
+  Call export_nodes({
     filePath: "UIUX/xxx.pen",
     nodeIds: [nodeId],
     outputDir: ".screenshots",
     format: "png",
     scale: 2
-  }) 导出设计截图
+  }) to export design screenshot
 
-  或调用 get_screenshot({
+  OR call get_screenshot({
     filePath: "UIUX/xxx.pen",
     nodeId: nodeId
-  }) 获取内联截图
+  }) for an inline screenshot
 
-门控条件: 截图必须成功获取
-  - 导出截图路径: .screenshots/{nodeId}.png
-  - 失败时: 重试一次，仍失败则暂停并告知用户
+Gate condition: Screenshot must be successfully captured
+  - Exported screenshot path: .screenshots/{nodeId}.png
+  - On failure: retry once; if still failing, pause and notify the user
 
-输出: "视觉基准已获取: .screenshots/{nodeId}.png"
+Output: "Visual baseline captured: .screenshots/{nodeId}.png"
 
-⛔ 此步是硬阻断: 没有视觉基准就开始实现 = 盲写代码，禁止继续。
+⛔ This is a hard block: implementing without a visual baseline = coding blind. Do not proceed.
 ```
 
-### Step 4: 设计 → 代码映射分析
+### Step 4: Design → Code Mapping Analysis
 
 ```
-操作:
-  1. 分析 Step 2 获取的设计数据，建立映射关系：
+Actions:
+  1. Analyze the design data from Step 2 and establish mappings:
 
-  A. 颜色映射:
-     - 设计变量（$xxx）→ 匹配项目 CSS Variable（var(--color-xxx)）
-     - 硬编码颜色值 → 检查 base.scss 中是否有对应变量
-     - 找不到对应变量 → 使用裸值 + /* @design-hardcoded */ 注释
+  A. Color mapping:
+     - Design variables ($xxx) → match project CSS variables (var(--color-xxx))
+     - Hard-coded color values → check base.scss for corresponding variables
+     - No matching variable found → use raw value + /* @design-hardcoded */ comment
 
-  B. 组件映射:
-     - 设计系统组件（ref 节点）→ 匹配项目已有 Vue 组件
-     - Button → Element Plus ElButton 或自定义按钮组件
-     - Card/Badge/Input → 检查 app/components/ 下对应组件
-     - 无对应组件 → 标记需要新建
+  B. Component mapping:
+     - Design system components (ref nodes) → match existing Vue components in the project
+     - Button → Element Plus ElButton or custom button component
+     - Card/Badge/Input → check app/components/ for corresponding components
+     - No matching component → flag as needing creation
 
-  C. 图标映射:
-     - 设计中的 icon_font 节点 → 对应 Phosphor 图标或自定义 SVG
-     - 品牌/定制图标 → 用 export_nodes 导出 SVG，抽成 components/icons/XxxIcon.vue
-     - 无法判断的图标 → 列出描述，询问用户
+  C. Icon mapping:
+     - icon_font nodes in the design → map to Phosphor icons or custom SVGs
+     - Brand/custom icons → export SVG via export_nodes, extract as components/icons/XxxIcon.vue
+     - Ambiguous icons → list with descriptions and ask the user
 
-  D. 文本映射:
-     - 检查文本内容是否需要 i18n 处理
-     - 硬编码文案 → 需要加入 en.json / ja.json / zh-TW.json
+  D. Text mapping:
+     - Check whether text content needs i18n handling
+     - Hard-coded copy → must be added to en.json / ja.json / zh-TW.json
 
-输出: 映射清单（每项标注: 已有组件/需新建/待确认）
+Output: Mapping inventory (each item labeled: existing component / needs creation / pending confirmation)
 ```
 
-### Step 5: 实现代码
+### Step 5: Implement Code
 
 ```
-操作:
-  1. 精确像素值转录（保留设计数据的精确值）:
-     - 设计标注 gap: 32 → 写 gap-[32px]，禁止 gap-8
-     - 设计标注 padding: 40 → 写 p-[40px]，禁止 p-10
-     - 设计标注 borderRadius: [16,16,0,0] → 写 rounded-t-[16px]，禁止 rounded-t-2xl
-     唯一例外: tailwind.config.ts 中已有精确匹配的 Design Token
+Actions:
+  1. Transcribe exact pixel values from design data (preserve design values precisely):
+     - Design specifies gap: 32 → write gap-[32px], NOT gap-8
+     - Design specifies padding: 40 → write p-[40px], NOT p-10
+     - Design specifies borderRadius: [16,16,0,0] → write rounded-t-[16px], NOT rounded-t-2xl
+     Only exception: an exact matching Design Token exists in tailwind.config.ts
 
-  2. 颜色处理:
-     - 有对应 CSS Variable → 使用 var(--color-xxx) 或 Tailwind class
-     - 硬编码色值 → 写裸值 + /* @design-hardcoded */ 注释
-     - 禁止自行创建新 CSS Variable
+  2. Color handling:
+     - Has a corresponding CSS variable → use var(--color-xxx) or Tailwind class
+     - Hard-coded color value → write raw value + /* @design-hardcoded */ comment
+     - Do NOT create new CSS variables on your own
 
-  3. 效果类属性（透明度/模糊/阴影/渐变）:
-     - 先 grep 项目中同类效果的已有实现
-     - 以项目已有参数为基准适配，不直接复制设计值
-     - 必须结合实际渲染环境判断
+  3. Effect properties (opacity / blur / shadow / gradient):
+     - First grep the project for existing implementations of the same effect type
+     - Adapt using existing project parameters as the baseline; do not copy design values directly
+     - Must account for the actual rendering environment
 
-  4. Vue 组件规范:
-     - 使用 Composition API（<script setup>）
-     - 组件命名 PascalCase
-     - i18n 使用 const { t } = useI18n()，禁止 $t
-     - 路由使用 NuxtLink / navigateTo()
-     - API 调用通过 app/api/ 模块
+  4. Vue component conventions:
+     - Use Composition API (<script setup>)
+     - Component names in PascalCase
+     - i18n: use const { t } = useI18n(), never $t
+     - Routing: use NuxtLink / navigateTo()
+     - API calls through app/api/ modules
 
-  5. 文件修改限制: 单次不超过 3 个文件
+  5. File modification limit: no more than 3 files per pass
 
-输出: 实现完成的代码
+Output: Implemented code
 ```
 
-### Step 6: 视觉验收 ⛔ 交付门控
+### Step 6: Visual Acceptance ⛔ Delivery Gate
 
 ```
-操作:
-  1. 在浏览器中打开实现结果（开发服务器应已运行）
-  2. 截图当前实现:
-     - 使用 chrome-devtools take_screenshot 或 playwright browser_take_screenshot
-     - 截图存放: .screenshots/impl-{component}-current.png
-  3. 与 Step 3 的设计基准截图逐项对比:
+Actions:
+  1. Open the implementation in a browser (dev server should already be running)
+  2. Take a screenshot of the current implementation:
+     - Use chrome-devtools take_screenshot or playwright browser_take_screenshot
+     - Save to: .screenshots/impl-{component}-current.png
+  3. Compare against the design baseline screenshot from Step 3:
 
-  对比清单:
-  □ 整体布局结构（元素排列/层级关系）
-  □ 间距（padding/margin/gap）
-  □ 颜色（文字色/背景色/边框色）
-  □ 圆角（border-radius）
-  □ 字号/字重（font-size/font-weight）
-  □ 图标（正确性/尺寸/颜色）
-  □ 特效（阴影/模糊/渐变）
+  Comparison checklist:
+  □ Overall layout structure (element arrangement / hierarchy)
+  □ Spacing (padding / margin / gap)
+  □ Colors (text / background / border)
+  □ Border radius
+  □ Font size / font weight
+  □ Icons (correctness / size / color)
+  □ Effects (shadow / blur / gradient)
 
-  4. 偏差处理:
-     - 发现偏差 → 当场修复 → 重新截图 → 再对比
-     - 单个组件最多 3 轮修正，超过 3 轮暂停并报告给用户
-     - 无偏差 → 进入交付
+  4. Handling discrepancies:
+     - Discrepancy found → fix immediately → re-screenshot → compare again
+     - Maximum 3 correction rounds per component; if still not matching after 3 rounds, pause and report to the user
+     - No discrepancies → proceed to delivery
 
-门控条件: 实现截图与设计基准截图无可见偏差
-输出:
-  "视觉验收通过: {component_name}
-   设计基准: .screenshots/{nodeId}.png
-   实现结果: .screenshots/impl-{component}-current.png"
-```
-
----
-
-## Cycle 完成后
-
-```
-1. 清理截图:
-   - 验收通过的截图可删除（节省空间）
-   - 或保留到整个任务完成后统一清理
-
-2. 如果是整页拆分模式:
-   - 标记当前组件为完成
-   - 输出进度: "完成 {M}/{N} 个组件"
-   - 自动进入下一个组件的 Cycle
-
-3. 如果是单组件模式:
-   - 直接完成
+Gate condition: Implementation screenshot must have no visible deviation from the design baseline
+Output:
+  "Visual acceptance passed: {component_name}
+   Design baseline: .screenshots/{nodeId}.png
+   Implementation: .screenshots/impl-{component}-current.png"
 ```
 
 ---
 
-## 整体任务完成播报
+## After Each Cycle
+
+```
+1. Clean up screenshots:
+   - Screenshots that have passed acceptance can be deleted (to save space)
+   - Or keep them until the entire task is complete, then clean up all at once
+
+2. If in full-page split mode:
+   - Mark the current component as done
+   - Output progress: "Completed {M}/{N} components"
+   - Automatically start the Cycle for the next component
+
+3. If in single-component mode:
+   - Task complete
+```
+
+---
+
+## Overall Task Completion Summary
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Pencil 设计还原完成
+Pencil Design Implementation Complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-组件数: {N} 个
-修改文件: {files list}
-修正轮数: {total rounds}（目标 <= 1 轮/组件）
-跳过步骤: 0（强制流程保障）
+Components: {N}
+Files modified: {files list}
+Correction rounds: {total rounds} (target: <= 1 round/component)
+Steps skipped: 0 (guaranteed by enforced workflow)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-## 可选参数
+## Optional Flags
 
-| 参数 | 说明 |
-|------|------|
-| `--desktop-only` | 仅实现桌面端，跳过移动端适配 |
-| `--mobile-only` | 仅实现移动端 |
-| `--skip-effects` | 跳过效果类属性（阴影/模糊/渐变），后续单独处理 |
-| `--skip-i18n` | 跳过 i18n 处理，仅实现默认语言 |
-| `--dry-run` | 仅执行 Step 1-4（分析+映射），不写代码 |
-
----
-
-## 异常处理
-
-| 场景 | 处理方式 |
-|------|---------|
-| batch_get 返回 "..." 子节点 | 增大 readDepth 或按子节点 ID 分段读取 |
-| export_nodes / get_screenshot 失败 | 重试一次；仍失败则要求用户确认 Pencil 编辑器是否运行 |
-| 节点 ID 无效 | 用 batch_get 的 patterns 搜索节点名称重新定位 |
-| 实现截图与设计差异过大 | 3 轮修正后仍不匹配 → 暂停，输出差异清单，等用户指示 |
-| 浏览器未启动 | 提示用户启动开发服务器（npm run dev）和浏览器 |
-| 效果类属性环境不匹配 | 优先使用项目已有同类效果的参数，标注适配原因 |
-| 设计变量无对应 CSS Variable | 使用裸值 + 注释标记，不自行创建新变量 |
+| Flag | Description |
+|------|-------------|
+| `--desktop-only` | Implement desktop only, skip mobile adaptation |
+| `--mobile-only` | Implement mobile only |
+| `--skip-effects` | Skip effect properties (shadow/blur/gradient) for separate handling later |
+| `--skip-i18n` | Skip i18n handling, implement default language only |
+| `--dry-run` | Run Steps 1–4 only (analysis + mapping), do not write code |
 
 ---
 
-## 与项目基建的协同
+## Error Handling
 
-| 基建 | 协同方式 |
-|------|---------|
-| `UIUX/design-system.pen` | 组件复用、颜色/字体 Token 来源 |
-| `app/assets/css/base.scss` | CSS Variable 对照表 |
-| `UIUX/DESIGN-PRACTICES.md` | Pencil 操作规范参照 |
-| `/review` Skill | 实现完成后可触发 Code Review |
-| `/quality-scan` Skill | 实现完成后可检查代码规范 |
-| `CLAUDE.md` | 架构约定和代码规范的权威来源 |
+| Scenario | Resolution |
+|----------|-----------|
+| batch_get returns "..." for child nodes | Increase readDepth or fetch child nodes by ID in segments |
+| export_nodes / get_screenshot fails | Retry once; if still failing, ask the user to confirm the Pencil editor is running |
+| Invalid node ID | Use batch_get with patterns to search by node name and relocate |
+| Implementation screenshot diverges too much from design | After 3 correction rounds with no match → pause, output a diff list, await user instructions |
+| Browser not running | Prompt the user to start the dev server (npm run dev) and open a browser |
+| Effect properties don't match in the actual environment | Prioritize existing project parameters for the same effect type; document the adaptation rationale |
+| Design variable has no corresponding CSS variable | Use raw value + comment annotation; do not create new variables |
 
 ---
 
-## 反模式警告
+## Integration with Project Infrastructure
 
-以下行为会导致大量返工，本 Skill 通过门控结构性禁止：
+| Infrastructure | Integration |
+|----------------|------------|
+| `UIUX/design-system.pen` | Component reuse and color/typography token source |
+| `app/assets/css/base.scss` | CSS variable reference table |
+| `UIUX/DESIGN-PRACTICES.md` | Pencil operational conventions |
+| `/review` Skill | Trigger a code review after implementation is complete |
+| `/quality-scan` Skill | Check code standards after implementation is complete |
+| `CLAUDE.md` | Authoritative source for architecture conventions and code standards |
 
-| 反模式 | 后果 | 本 Skill 如何阻止 |
-|--------|------|------------------|
-| 不截图就实现 | 盲写代码，偏差累积 | Step 3 硬阻断 |
-| 整页实现完才对比 | 偏差难以定位 | 整页强制拆分为组件 Cycle |
-| 用 Tailwind 语义 class 近似 | 间距/圆角普遍偏差 | Step 5 精确像素值转录规则 |
-| 硬编码颜色值 | 主题不一致 | Step 4 颜色映射 + Step 5 CSS Variable 规则 |
-| 用 Read/Grep 读 .pen 文件 | 内容加密，读到乱码 | 全流程强制使用 Pencil MCP 工具 |
-| 跳过 i18n | 文案只有一种语言 | Step 4 文本映射检查 |
-| 效果属性直接复制设计值 | 实际环境渲染不一致 | Step 5 环境适配流程 |
+---
+
+## Anti-Pattern Warnings
+
+The following behaviors cause significant rework. This skill structurally prevents them through gate checks:
+
+| Anti-pattern | Consequence | How this skill prevents it |
+|-------------|-------------|--------------------------|
+| Implementing without a screenshot | Coding blind, errors accumulate | Step 3 hard block |
+| Comparing only after full-page implementation | Discrepancies are hard to isolate | Full page is forced to split into per-component cycles |
+| Using approximate Tailwind semantic classes | Spacing/radius deviations throughout | Step 5 exact pixel transcription rules |
+| Hard-coding color values | Inconsistent theming | Step 4 color mapping + Step 5 CSS variable rules |
+| Reading .pen files with Read/Grep | Content is encrypted, output is garbled | Entire workflow enforces Pencil MCP tools exclusively |
+| Skipping i18n | Copy exists in only one language | Step 4 text mapping check |
+| Copying effect properties directly from design values | Inconsistent rendering in the actual environment | Step 5 environment adaptation workflow |

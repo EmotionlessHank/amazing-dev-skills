@@ -1,66 +1,66 @@
-# feat — 迁移到新项目（SETUP）
+# feat — Migrating to a New Project (SETUP)
 
-把 `SKILL.md` 复制进目标项目的 skills 目录后，按下表替换 `{占位符}`，再跑验证。
-与 `autopilot` 配套使用（feat 出方案 → autopilot 开发），两者占位符尽量保持一致。
+After copying `SKILL.md` into the target project's skills directory, replace all `{placeholders}` per the table below, then run the verification steps.
+Used together with `autopilot` (feat produces the plan → autopilot develops it); keep placeholders consistent between the two.
 
-## 占位符替换清单
+## Placeholder Replacement Checklist
 
-| 占位符 | 含义 | 示例（oddfi-frontend） |
-|--------|------|----------------------|
-| `{DOCS_ROOT}` | 需求/方案文档根目录 | `.progress` |
-| `{type}` / `{ID}` | 需求类型 / 编号格式 | `designs`·`bug` / `DD-NNN`·`BUG-NNN` |
-| `{LESSONS}` | 经验教训文档（可选，无则删 §0.3） | `docs/LESSONS.md` |
-| `{WORKTREE_SKILL}` | worktree 隔离开发流程（无则改成「建功能分支」） | `/worktree-dev` |
-| `{SMALL_FILE_THRESHOLD}` | 小功能文件数阈值（可跳 DD） | `2` |
-| `{MAX_FILES_PER_BATCH}` | 单 batch 文件上限 | `3` |
-| `{DESIGN_IMPL_SKILL}` | UI 像素还原流程（无 UI 则删 §2.5 + 相关行） | `/figma-impl` |
-| `{REPO_MAP}` | 跨仓库地图（路径 + 各自开发分支） | 见下方 |
-| `{REPO_PATH}` | {REPO_MAP} 中某仓库本地路径（命令模板变量，按表逐仓实例化，不在 SKILL 逐项替换） | `~/work/oddfi-backend` |
-| `{DEV_BRANCH}` | {REPO_MAP} 中该仓库的开发活跃分支（命令模板变量） | `dev`（后端）/ `main`（合约） |
-| `{SSH_INVENTORY}` | SSH 服务器清单文件（含别名→用途） | `~/.ssh/SERVERS.md` |
-| `{SERVER_ALIAS}` | 服务器别名（多台见 {SSH_INVENTORY}） | `oddfi-backend` / `oddfi-dev` |
+| Placeholder | Meaning | Example (oddfi-frontend) |
+|-------------|---------|--------------------------|
+| `{DOCS_ROOT}` | Root directory for requirements/plan documents | `.progress` |
+| `{type}` / `{ID}` | Requirement type / ID format | `designs`·`bug` / `DD-NNN`·`BUG-NNN` |
+| `{LESSONS}` | Lessons learned document (optional; delete §0.3 if absent) | `docs/LESSONS.md` |
+| `{WORKTREE_SKILL}` | Worktree-isolated development workflow (if absent, change to "create a feature branch") | `/worktree-dev` |
+| `{SMALL_FILE_THRESHOLD}` | File count threshold for a "small" feature (may skip DD) | `2` |
+| `{MAX_FILES_PER_BATCH}` | Max files per batch | `3` |
+| `{DESIGN_IMPL_SKILL}` | UI pixel-perfect implementation workflow (delete §2.5 + related lines if no UI tasks) | `/figma-impl` |
+| `{REPO_MAP}` | Cross-repo map (paths + each repo's development branch) | See below |
+| `{REPO_PATH}` | Local path for a repo in `{REPO_MAP}` (command template variable; instantiate per repo — do not replace globally in SKILL) | `~/work/oddfi-backend` |
+| `{DEV_BRANCH}` | Active development branch for that repo in `{REPO_MAP}` (command template variable) | `dev` (backend) / `main` (contracts) |
+| `{SSH_INVENTORY}` | SSH server inventory file (alias → purpose mapping) | `~/.ssh/SERVERS.md` |
+| `{SERVER_ALIAS}` | Server alias (multiple servers listed in `{SSH_INVENTORY}`) | `oddfi-backend` / `oddfi-dev` |
 
-> `{SMALL_FILE_THRESHOLD}`（跳 DD 门槛）与 `{MAX_FILES_PER_BATCH}`（批次切分上限）语义不同、可不等值，别误填成同值。
+> `{SMALL_FILE_THRESHOLD}` (threshold for skipping the DD) and `{MAX_FILES_PER_BATCH}` (batch split limit) have different semantics and may have different values — do not mistakenly set them to the same value.
 
-## {REPO_MAP} — 跨仓库地图（关键定制点）
+## {REPO_MAP} — Cross-Repo Map (Critical Customization Point)
 
-各仓库**开发分支可能不同**，必须在此明确，§2.1 据此拉取。oddfi 实例：
+**Each repository may have a different development branch** — this must be specified here; §2.1 pulls based on this map. oddfi example:
 
-| 仓库 | 路径 | 开发分支 | API 全景入口 |
-|------|------|---------|-------------|
-| 后端 | `~/work/oddfi-backend` | **dev**（后端在 dev 迭代） | 子服务 handler/model |
-| 合约 | `~/work/oddfi-ODD` | **main** | `docs/development/api.md` |
-| 前端（本仓） | `~/work/oddfi-frontend` | **main** | — |
+| Repo | Path | Development branch | API overview entry point |
+|------|----- |--------------------|--------------------------|
+| Backend | `~/work/oddfi-backend` | **dev** (backend iterates on dev) | Sub-service handler/model |
+| Contracts | `~/work/oddfi-ODD` | **main** | `docs/development/api.md` |
+| Frontend (this repo) | `~/work/oddfi-frontend` | **main** | — |
 
-空白模板（换项目时直接填）：
+Blank template (fill in when switching projects):
 
-| 仓库 | 路径 | 开发分支 | API 全景入口 |
-|------|------|---------|-------------|
+| Repo | Path | Development branch | API overview entry point |
+|------|----- |--------------------|--------------------------|
 | `{...}` | `{...}` | `{...}` | `{...}` |
 
-> 换项目时：列出本项目所有相关仓库 + 各自「开发活跃分支」（这是最易错的定制点——拉错分支 = 调研到旧代码）。
-> **不确定某仓库的开发活跃分支** → 跑 `git -C <path> branch -r --sort=-committerdate | head -3` 看最近活跃分支，或问该仓库 owner。
+> When switching projects: list all related repos + each one's "active development branch" (this is the most error-prone customization point — pulling the wrong branch means researching stale code).
+> **Unsure about a repo's active development branch** → run `git -C <path> branch -r --sort=-committerdate | head -3` to see the most recently active branches, or ask that repo's owner.
 
-## 可选模块（按项目裁剪）
+## Optional Modules (trim per project)
 
-- 无其它仓库（纯单仓项目）→ 删 §2.1/§2.2 跨仓库部分，保留「读本仓真实代码」
-- 无服务器/无需运行时核验 → 删 §2.3
-- 无 UI/设计稿 → 删 §0 UI 判定 + §2.5 + `{DESIGN_IMPL_SKILL}` 引用
-- 无经验教训文档 → 删 §0.3
+- No other repos (pure single-repo project) → delete the cross-repo parts of §2.1/§2.2; keep "read this repo's real code"
+- No server / no runtime verification needed → delete §2.3
+- No UI / no design files → delete §0 UI detection + §2.5 + `{DESIGN_IMPL_SKILL}` references
+- No lessons learned document → delete §0.3
 
-## 依赖的 plan-review 代理
+## Required Plan-Review Agents
 
-阶段 4 用到的 subagent（项目需提供或换等价物）：
-- `critic`（中/大需求）— 方案漏洞/边界/可行性
-- `design-distiller`（中需求可选）— 磨平方案软边界
-- `architect`（大需求）— 架构/可逆性
-- `security-reviewer` / `document-specialist`（大需求按域）
+Subagents used in Phase 4 (project must provide or substitute equivalents):
+- `critic` (medium/large requirements) — plan flaws/edge cases/feasibility
+- `design-distiller` (optional for medium requirements) — sharpen soft plan boundaries
+- `architect` (large requirements) — architecture/reversibility
+- `security-reviewer` / `document-specialist` (large requirements, by domain)
 
-无对应 agent → 降为 1 个通用 review agent，或主对话先自查再请用户把关。
+If no corresponding agents exist → fall back to 1 generic review agent, or have the main conversation self-check then hand to the user for sign-off.
 
-## 验证
+## Verification
 
-0. 占位符残留自检：`grep -oE '\{[A-Za-z_|]+\}' SKILL.md | sort -u`，确认只剩**运行时动态量**白名单（`{ID}` `{type}` `{platform}` `{agent}` `{N}` `{K}` `{M}` `{REPO_PATH}` `{DEV_BRANCH}` `{DD|ENH|BUG}`），无未替换的**配置占位**
-1. 占位符全部替换，`{REPO_MAP}` 已填本项目真实仓库 + 开发分支
-2. 拿一个涉及跨仓库的需求跑一遍：确认 §2.1 真的切对分支拉了最新、§2 的 DD §Research 里有「真实代码路径行号 / commit / curl HTTP 码」证据、阶段 4 真的 spawn 了对应数量 plan-review 代理
-3. 确认服务器操作**全程只读**、确认门控前**没有编码**
+0. Placeholder residue check: `grep -oE '\{[A-Za-z_|]+\}' SKILL.md | sort -u` — confirm only **runtime dynamic quantities** remain in the whitelist (`{ID}` `{type}` `{platform}` `{agent}` `{N}` `{K}` `{M}` `{REPO_PATH}` `{DEV_BRANCH}` `{DD|ENH|BUG}`); no unresolved **config placeholders**
+1. All placeholders replaced; `{REPO_MAP}` filled with this project's real repos + development branches
+2. Run through a cross-repo requirement end-to-end: confirm §2.1 checked out the correct branch and pulled the latest, the DD §Research section contains "real code path+line numbers / commit / curl HTTP code" evidence, and Phase 4 truly spawned the appropriate number of plan-review agents
+3. Confirm server operations were **read-only throughout** and **no code was written before the confirmation gate**

@@ -1,10 +1,11 @@
 """
-token_auth.py — HMAC 派生 token 的最小鉴权片段（Flask 示例）
+token_auth.py — Minimal HMAC-derived token auth snippet (Flask example)
 
-设计：token = HMAC(SECRET, 固定串)[:24]。
-- 不存 token，只存 SECRET（服务器 .env，600）；token 由 SECRET 现算，可随时换 SECRET 吊销。
-- 比对用 hmac.compare_digest 防时序侧信道。
-- 数据路径用环境变量，避免多组件写死相对路径。
+Design: token = HMAC(SECRET, fixed-string)[:24].
+- The token is never stored — only the SECRET is (in server .env, chmod 600).
+  The token is derived on demand from SECRET and can be revoked by rotating SECRET.
+- Comparison uses hmac.compare_digest to prevent timing side-channel attacks.
+- Data path comes from an environment variable to avoid multiple components hardcoding relative paths.
 """
 
 import hashlib
@@ -13,7 +14,7 @@ import os
 import pathlib
 
 SECRET = os.environ.get("APP_SECRET", "dev-change-me").encode()
-DATA = pathlib.Path(os.environ.get("DATA_PATH", "data.json"))  # 多组件共享同一份
+DATA = pathlib.Path(os.environ.get("DATA_PATH", "data.json"))  # shared across components
 
 
 def expected_token() -> str:
@@ -26,20 +27,20 @@ def check(req):
         abort(403)
 
 
-# ---- Flask 用法 ----
+# ---- Flask usage ----
 # from flask import Flask, request, send_file
 # app = Flask(__name__)
 #
-# @app.get("/healthz")          # 不鉴权，给探活/证书校验
+# @app.get("/healthz")          # no auth — for health checks / ACME validation
 # def health(): return "ok"
 #
-# @app.get("/d")                # 受保护页面
+# @app.get("/d")                # protected route
 # def page():
 #     check(request)
 #     return send_file("index.html")
 #
 # if __name__ == "__main__":
 #     import sys
-#     if "--token" in sys.argv:  # 打印当前有效 token（生成链接用，别打印到对话）
+#     if "--token" in sys.argv:  # print current valid token (for link generation — never print to conversation)
 #         print(expected_token()); sys.exit(0)
-#     app.run(host="127.0.0.1", port=8848)   # 只监听 localhost
+#     app.run(host="127.0.0.1", port=8848)   # listen on localhost only

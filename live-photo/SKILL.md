@@ -1,107 +1,107 @@
 ---
 name: live-photo
-description: 将视频转为 iPhone Live Photo 素材。当用户说 "/live-photo"、"做成 live photo"、"动态壁纸"、"live wallpaper" 时触发。从视频提取封面 + 转 HEVC MOV + makelive 配对，最后提示用户拖入 Mac 照片 app。
+description: Convert a video into iPhone Live Photo assets. Triggers when the user says "/live-photo", "make it a live photo", "live wallpaper", or "dynamic wallpaper". Extracts a cover frame + transcodes to HEVC MOV + pairs with makelive, then prompts the user to drag the files into the Mac Photos app.
 user_invocable: true
 ---
 
-# Live Photo — 视频转 iPhone Live Photo 素材
+# Live Photo — Convert Video to iPhone Live Photo Assets
 
-## 触发条件
+## Trigger Conditions
 
-用户说 `/live-photo`、"做成 live photo"、"动态壁纸"、"live wallpaper"，并提供一个视频文件路径。
+User says `/live-photo`, "make it a live photo", "live wallpaper", or "dynamic wallpaper", and provides a video file path.
 
-## 前置依赖
+## Prerequisites
 
-- `ffmpeg` / `ffprobe` — 视频处理
-- `makelive` — Live Photo 元数据配对（`pipx install makelive --python python3.13`）
-- `exiftool` — 元数据验证（`brew install exiftool`）
+- `ffmpeg` / `ffprobe` — video processing
+- `makelive` — Live Photo metadata pairing (`pipx install makelive --python python3.13`)
+- `exiftool` — metadata verification (`brew install exiftool`)
 
-如果缺少依赖，先提示用户安装，不要静默跳过。
+If any dependency is missing, prompt the user to install it before proceeding — do not silently skip.
 
-## 执行流程
+## Execution Flow
 
-### 1. 获取视频信息
-
-```bash
-ffprobe -v quiet -print_format json -show_streams "<视频路径>"
-```
-
-确认分辨率、编码、时长。告知用户视频基本信息。
-
-### 2. 提取封面图
-
-从第一帧提取 JPEG 封面（用户可指定时间点，默认第一帧）：
+### 1. Inspect the video
 
 ```bash
-ffmpeg -y -i "<视频路径>" -vframes 1 -q:v 2 -update 1 "<输出目录>/<基础名>.jpg"
+ffprobe -v quiet -print_format json -show_streams "<video_path>"
 ```
 
-### 3. 转换视频为 HEVC MOV
+Confirm resolution, codec, and duration. Report the basic video info to the user.
 
-将视频转为 iPhone Live Photo 兼容格式：
-- **编码**：HEVC (H.265)，使用 `hevc_videotoolbox` 硬件加速
-- **时长**：截取前 3 秒（iPhone Live Photo 标准时长），用户可自定义
-- **容器**：MOV
-- **音频**：去除（`-an`）
-- **Tag**：`hvc1`
+### 2. Extract the cover image
+
+Extract a JPEG cover from the first frame (user may specify a timestamp; default is the first frame):
 
 ```bash
-ffmpeg -y -i "<视频路径>" -t 3 -c:v hevc_videotoolbox -q:v 65 -tag:v hvc1 -an "<输出目录>/<基础名>.mov"
+ffmpeg -y -i "<video_path>" -vframes 1 -q:v 2 -update 1 "<output_dir>/<base_name>.jpg"
 ```
 
-### 4. 写入配对元数据
+### 3. Transcode video to HEVC MOV
 
-使用 `makelive` 为图片和视频写入相同的 `ContentIdentifier`：
+Convert the video to an iPhone Live Photo-compatible format:
+- **Codec**: HEVC (H.265) using `hevc_videotoolbox` hardware acceleration
+- **Duration**: clip to 3 seconds (iPhone Live Photo standard), user-configurable
+- **Container**: MOV
+- **Audio**: stripped (`-an`)
+- **Tag**: `hvc1`
 
 ```bash
-makelive "<基础名>.jpg" "<基础名>.mov"
+ffmpeg -y -i "<video_path>" -t 3 -c:v hevc_videotoolbox -q:v 65 -tag:v hvc1 -an "<output_dir>/<base_name>.mov"
 ```
 
-> 注意：makelive 要求图片和视频**同名**（仅扩展名不同），放在同一目录下。
+### 4. Write pairing metadata
 
-### 5. 验证配对
+Use `makelive` to write a shared `ContentIdentifier` to both the image and the video:
 
 ```bash
-exiftool -ContentIdentifier "<基础名>.jpg" "<基础名>.mov"
+makelive "<base_name>.jpg" "<base_name>.mov"
 ```
 
-确认两个文件的 `ContentIdentifier` 一致。
+> Note: `makelive` requires the image and video to have **the same base name** (differing only in extension) and be in the same directory.
 
-### 6. 打开文件夹并提示用户
+### 5. Verify pairing
 
 ```bash
-open "<输出目录>"
+exiftool -ContentIdentifier "<base_name>.jpg" "<base_name>.mov"
 ```
 
-输出最终提示：
+Confirm both files share the same `ContentIdentifier`.
 
-```
-Live Photo 素材已生成：
-- <基础名>.jpg（封面图，XXX KB）
-- <基础名>.mov（动态视频，XXX MB）
+### 6. Open folder and prompt the user
 
-请在 Finder 中同时选中这两个文件，一起拖入 Mac 照片 app。
-导入后确认照片显示 "LIVE" 标记，开启 iCloud 照片会自动同步到 iPhone。
+```bash
+open "<output_dir>"
 ```
 
-## 命名规则
+Display the final prompt:
 
-- 输出文件与源视频放在**同一目录**
-- 基础名 = 源视频文件名去掉扩展名，空格替换为下划线
-- 示例：`911 touring 5s video.mp4` → `911_touring_5s_video.jpg` + `911_touring_5s_video.mov`
+```
+Live Photo assets generated:
+- <base_name>.jpg (cover image, XXX KB)
+- <base_name>.mov (motion video, XXX MB)
 
-## 用户可选参数
+In Finder, select both files simultaneously and drag them into the Mac Photos app.
+After import, confirm the photo shows the "LIVE" badge. With iCloud Photos enabled, it will sync to iPhone automatically.
+```
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| 封面时间点 | `0` | 从视频哪一秒提取封面，如 `1.5` |
-| 视频时长 | `3` 秒 | Live Photo 动态部分时长 |
-| 起始时间 | `0` | 从视频哪一秒开始截取 |
+## Naming Convention
 
-用户未指定时使用默认值，不主动询问。
+- Output files are placed in the **same directory** as the source video
+- Base name = source video filename with the extension removed, spaces replaced with underscores
+- Example: `911 touring 5s video.mp4` → `911_touring_5s_video.jpg` + `911_touring_5s_video.mov`
 
-## 注意事项
+## Optional Parameters
 
-- 如果 `makelive` 未安装，引导用户执行：`pipx install makelive --python python3.13`
-- 不要用 AirDrop 传输，AirDrop 可能丢失配对元数据
-- 必须通过 Mac 照片 app 导入才能正确识别 Live Photo
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Cover timestamp | `0` | Second in the video to extract the cover frame from (e.g. `1.5`) |
+| Video duration | `3` seconds | Duration of the Live Photo motion portion |
+| Start time | `0` | Second in the video to begin the clip from |
+
+Use defaults when the user does not specify — do not proactively ask.
+
+## Notes
+
+- If `makelive` is not installed, guide the user to run: `pipx install makelive --python python3.13`
+- Do not transfer via AirDrop — AirDrop may strip the pairing metadata
+- The files must be imported through the Mac Photos app for Live Photo to be recognized correctly

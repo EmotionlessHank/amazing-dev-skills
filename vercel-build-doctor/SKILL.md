@@ -1,10 +1,10 @@
 ---
 name: vercel-build-doctor
-description: Vercel 线上构建错误诊断。当用户提到 Vercel/线上构建失败、部署报错、build error 时自动触发。通过 Vercel CLI/API 一步获取错误日志，定位根因并修复。
+description: Diagnose Vercel production build errors. Automatically triggers when the user mentions a Vercel build failure, deployment error, or build error. Fetches error logs in one step via the Vercel CLI/API, identifies the root cause, and applies a fix.
 triggers:
-  - vercel 构建失败
-  - 线上构建报错
-  - 部署失败
+  - vercel build failed
+  - production build error
+  - deployment failed
   - build error
   - vercel error
   - /vercel-doctor
@@ -12,30 +12,30 @@ triggers:
 
 # Vercel Build Doctor
 
-线上构建错误的快速诊断与修复技能。
+Fast diagnosis and fix skill for production build errors.
 
-## 触发场景识别
+## Trigger Recognition
 
-以下信号表明需要启动此技能：
-- 用户提到"Vercel 构建失败"、"线上报错"、"部署失败"
-- 用户发送 Vercel 部署链接（含 `vercel.com` URL）
-- 用户说"build error"、"构建挂了"
+The following signals indicate this skill should activate:
+- User mentions "Vercel build failed", "production error", "deployment failed"
+- User shares a Vercel deployment URL (containing `vercel.com`)
+- User says "build error" or "the build is broken"
 
-## 执行流程
+## Execution Flow
 
-### Step 1：获取部署 ID
+### Step 1: Get the deployment ID
 
-从用户提供的信息中提取部署 ID。如果用户提供的是 Vercel URL，从中解析；如果没有，用 `vercel ls` 找到最近的 Error 部署：
+Extract the deployment ID from the information the user provides. If the user shares a Vercel URL, parse it from there. If not, use `vercel ls` to find the most recent failed deployment:
 
 ```bash
 vercel ls 2>&1 | head -15
 ```
 
-找到状态为 `● Error` 的部署 URL。
+Locate the deployment URL with status `● Error`.
 
-### Step 2：一步提取构建错误
+### Step 2: Extract build errors in one command
 
-使用以下命令直接提取错误信息（**核心命令，一步到位**）：
+Use the following command to pull error information directly — **the core command, one shot**:
 
 ```bash
 DPL_ID="<deployment_id_or_url>" && \
@@ -47,17 +47,17 @@ curl -s -H "Authorization: Bearer $TOKEN" \
   | grep -v 'sourcemap'
 ```
 
-**参数说明**：
-| 参数 | 作用 |
-|------|------|
-| `events?builds=1` | 只返回构建日志（排除运行时日志） |
-| `limit=2000` | 拉足够多的日志行避免截断 |
-| `direction=forward` | 按时间正序，错误在末尾 |
-| `jq -r '.[].payload.text'` | 提取纯文本日志行 |
-| `grep -iEB2 -A2` | 错误行前后各 2 行上下文 |
-| `grep -v 'sourcemap'` | 去除 Sentry sourcemap 噪音 |
+**Parameter reference**:
+| Parameter | Purpose |
+|-----------|---------|
+| `events?builds=1` | Return only build logs (exclude runtime logs) |
+| `limit=2000` | Pull enough log lines to avoid truncation |
+| `direction=forward` | Chronological order — errors appear near the end |
+| `jq -r '.[].payload.text'` | Extract plain-text log lines |
+| `grep -iEB2 -A2` | 2 lines of context before and after each error line |
+| `grep -v 'sourcemap'` | Strip Sentry sourcemap noise |
 
-如果 `jq` 不可用，备选方案：
+If `jq` is unavailable, use this fallback:
 
 ```bash
 curl -s ... | python3 -c "
@@ -70,25 +70,25 @@ for e in json.load(sys.stdin):
 "
 ```
 
-### Step 3：诊断与修复
+### Step 3: Diagnose and fix
 
-根据提取到的错误类型，执行对应修复：
+Based on the extracted error type, apply the corresponding fix:
 
-| 错误类型 | 修复动作 |
-|---------|---------|
-| ESLint error（如 `no-unused-vars`） | 定位文件行号，直接修复代码 |
-| Type error | 读取报错文件，修复类型问题 |
-| Module not found | 检查 import 路径和依赖 |
-| Build timeout | 检查是否有死循环或重型计算 |
+| Error type | Fix action |
+|------------|-----------|
+| ESLint error (e.g. `no-unused-vars`) | Locate file and line number, fix the code directly |
+| Type error | Read the failing file, resolve the type issue |
+| Module not found | Check import paths and dependencies |
+| Build timeout | Check for infinite loops or heavy computation |
 
-修复后：
-1. 本地验证 `pnpm lint && pnpm build`
-2. 提交并推送
-3. 用 `vercel ls` 确认新部署状态
+After applying the fix:
+1. Verify locally with `pnpm lint && pnpm build`
+2. Commit and push
+3. Confirm the new deployment status with `vercel ls`
 
-## 注意事项
+## Notes
 
-- **优先用 CLI/API 获取第一手数据**，不要用 WebFetch 抓 Vercel 网页（需登录，拿不到）
-- **不要本地 build 复现**，直接从 Vercel 拿日志更快更准
-- Vercel auth token 存储路径：`/Users/hang/Library/Application Support/com.vercel.cli/auth.json`
-- 如果 `vercel` CLI 未登录或 link 失败，提示用户执行 `vercel login` 和 `vercel link --yes --scope <scope>`
+- **Always use the CLI/API to get first-hand data** — do not use WebFetch to scrape the Vercel dashboard (requires login, data is inaccessible)
+- **Do not reproduce the error with a local build** — fetching logs directly from Vercel is faster and more accurate
+- Vercel auth token location: `/Users/hang/Library/Application Support/com.vercel.cli/auth.json`
+- If the `vercel` CLI is not logged in or `link` fails, prompt the user to run `vercel login` and `vercel link --yes --scope <scope>`

@@ -3,270 +3,269 @@ name: prd-writing
 description: Write production-grade Product Requirements Documents (PRD) following Oddfi's proven PM writing methodology. Use this skill when the user asks to write, draft, review, or improve a PRD, feature spec, or product requirements document. Covers Web3/fintech and general product domains.
 ---
 
-# PRD Writing Skill — Oddfi PM 文档方法论
+# PRD Writing Skill — Oddfi PM Documentation Methodology
 
-本 Skill 从 Oddfi 项目两份高质量 PRD（Sign in-Deposit、Markets Page）中提炼而成，适用于 Web3 产品、金融科技、以及任何需要高精度产品文档的场景。
-
----
-
-## 一、文档骨架（Standard Structure）
-
-根据功能复杂度选择「重量级」或「中量级」模板：
-
-### 重量级 PRD（跨模块 / 含链上交互 / 多角色协作）
-
-```
-1. 版本管理            — 版本号 + 时间 + 备注（表格）
-2. 需求背景            — 背景一句话 + 目标（编号列表）+ 执行摘要（关键步骤表）
-3. 需求描述            — 按功能模块拆分（3.1 / 3.2 ...），每个模块内：
-   3.x.1 交互流程       — 原型截图 / 竞品截图
-   3.x.2 技术约束       — 对比表（如 Wallet 类型矩阵）
-   3.x.3 需求细节描述    — 按阶段纵深展开（见「阶段式纵深」模式）
-   3.x.4 异常场景       — 独立收集所有 edge case
-   3.x.5 补充规则       — 按维度分类（统一原则 / 安全要求 / 体验要求）
-   3.x.6 业务约束       — Gas fee、费率、限额等
-4. 流程图              — 完整端到端流程图（Flowchart）
-   4.1 限制条件         — IP / 地区 / 合规
-   4.2 边缘场景         — 网络错误、超时、重试策略
-5. 埋点                — 按业务模块分表，定义每个事件
-6. 项目开发排期         — 排期细节表 + 甘特图 + Todo
-```
-
-### 中量级 PRD（单页面 / 单功能模块）
-
-```
-1. 需求目标            — 一句话说清楚做什么
-2. 需求描述            — 原型截图 + 分区说明
-   2.x 子模块           — 元素表格 + 规则 + 计算公式
-3. 补充说明            — 边缘场景 / 待确认项
-```
+This skill is distilled from two high-quality PRDs in the Oddfi project (Sign in-Deposit and Markets Page). It applies to Web3 products, fintech, and any scenario requiring high-precision product documentation.
 
 ---
 
-## 二、六大核心写作模式
+## I. Document Structure (Standard Structure)
 
-### 模式 1：「展示内容 + 规则」双栏分离（最核心）
+Choose between the "heavyweight" or "medium-weight" template based on feature complexity:
 
-**永远把「用户看到什么」和「系统怎么跑」分开写。**
+### Heavyweight PRD (cross-module / on-chain interactions / multi-stakeholder)
+
+```
+1. Version Log            — version number + date + notes (table)
+2. Background             — one-sentence context + objectives (numbered list) + executive summary (key steps table)
+3. Requirements           — split by functional module (3.1 / 3.2 ...), each module contains:
+   3.x.1 Interaction Flow  — prototype screenshots / competitor screenshots
+   3.x.2 Technical Constraints — comparison tables (e.g., Wallet type matrix)
+   3.x.3 Requirement Details   — expanded per phase (see "Phase-based Drill-down" pattern)
+   3.x.4 Edge Cases        — collected separately for all edge cases
+   3.x.5 Supplemental Rules — categorized by dimension (general principles / security / UX)
+   3.x.6 Business Constraints — gas fees, rates, limits, etc.
+4. Flowchart              — complete end-to-end flowchart
+   4.1 Restrictions        — IP / region / compliance
+   4.2 Edge Scenarios      — network errors, timeouts, retry strategies
+5. Analytics Tracking     — event definitions per business module, structured as tables
+6. Development Schedule   — detailed schedule table + Gantt chart + Todo
+```
+
+### Medium-weight PRD (single page / single feature module)
+
+```
+1. Objective              — one sentence describing what to build
+2. Requirements           — prototype screenshot + zone-by-zone breakdown
+   2.x Sub-module          — element table + rules + calculation formulas
+3. Notes                  — edge cases / items to be confirmed
+```
+
+---
+
+## II. Six Core Writing Patterns
+
+### Pattern 1: "Display Content + Rules" Two-Column Separation (Most Important)
+
+**Always separate "what the user sees" from "how the system works".**
 
 ```markdown
-### 1. 首次进入页面
+### 1. First Entry to Page
 
-**展示内容**：
-- 登录/注册弹窗
-- 登录入口按钮：邮箱、Google、Telegram、钱包
-- Promo code 输入框
-- 主 CTA 按钮
-- 用户协议/隐私政策入口
+**Display Content**:
+- Login/register modal
+- Login entry buttons: email, Google, Telegram, wallet
+- Promo code input field
+- Main CTA button
+- Terms of service / privacy policy links
 
-**规则**：
-- 首次进入未登录状态默认展示该弹窗
-- Sign in / Sign up 共用同一入口页，不强拆为两个独立页面
-- 用户选择任一方式完成认证后，直接进入后续欢迎入金页/已连接状态页
+**Rules**:
+- Show this modal by default when user enters without being logged in
+- Sign in / Sign up share a single entry page — do not split into two separate pages
+- After the user completes auth via any method, proceed directly to the onboarding deposit page / connected state page
 ```
 
-**为什么有效**：开发者读「展示内容」知道画什么 UI，读「规则」知道写什么逻辑——零歧义。
+**Why it works**: Developers read "Display Content" to know what UI to build, and "Rules" to know what logic to write — zero ambiguity.
 
 ---
 
-### 模式 2：阶段式纵深（Phase-based Drill-down）
+### Pattern 2: Phase-Based Drill-Down
 
-按用户旅程的时间切片组织内容，每个阶段独立完整。
+Organize content by time slices of the user journey; each phase is self-contained.
 
 ```markdown
-| 阶段 | 描述 |
-|------|------|
-| 1. 交易前 | 资产选择、金额输入、余额校验 |
-| 2. 交易确认页 | Token 授权 → 交易授权（两步） |
-| 3. 交易后 | 成功：资产更新 + 区块浏览器链接；失败：原因 + 重试 |
+| Phase | Description |
+|-------|-------------|
+| 1. Pre-trade | Asset selection, amount input, balance validation |
+| 2. Trade confirmation | Token approval → transaction approval (two steps) |
+| 3. Post-trade | Success: asset update + block explorer link; Failure: reason + retry |
 ```
 
-每个阶段内再用「展示内容 + 规则」双栏展开。
+Expand each phase further using the "Display Content + Rules" two-column format.
 
-**适用场景**：任何有明确步骤的用户流程（注册、支付、下单、入金）。
+**Use cases**: Any user flow with defined steps (registration, payment, order placement, deposit).
 
 ---
 
-### 模式 3：表格驱动对比（Table-Driven Comparison）
+### Pattern 3: Table-Driven Comparison
 
-所有结构化信息强制用表格，不用散文。
+**Force all structured information into tables — never prose.**
 
-**字段说明表**（UI 元素拆解）：
+**Field description table** (UI element breakdown):
 ```markdown
-| 字段 | 说明 | 示例 |
-|------|------|------|
-| 比赛名称 | 主队 VS 客队 | Braga VS Ferencvarosi |
-| 赔率 | 当前赔率，蓝色字体 | 1.53 |
-| 金额输入框 | 用户输入下注金额，**每条注单独立填写** | Amount |
+| Field | Description | Example |
+|-------|-------------|---------|
+| Match name | Home VS Away | Braga VS Ferencvarosi |
+| Odds | Current odds, blue text | 1.53 |
+| Amount input | User enters bet amount, **each bet slip is independent** | Amount |
 ```
 
-**对比矩阵**（技术选型 / 竞品）：
+**Comparison matrix** (technology selection / competitor analysis):
 ```markdown
 | Wallet | Type | When to use | Wallet Type | Support Chain |
 |--------|------|-------------|-------------|---------------|
-| EOA Wallet | 常规 Web3 钱包 | Swap 时自行支付 gas | EOA | EVM, SOL, Tron |
-| Web3 Wallet | Metamask, OKX... | 浏览器钱包开设账户 | GNOSIS_SAFE | 备注：... |
+| EOA Wallet | Standard Web3 wallet | User pays gas for Swap | EOA | EVM, SOL, Tron |
+| Web3 Wallet | Metamask, OKX... | Browser wallet for account creation | GNOSIS_SAFE | Note: ... |
 ```
 
-**状态矩阵**（权限 / 费用）：
+**State matrix** (permissions / fees):
 ```markdown
-| 场景 | 是否需要支付 gas fee | 谁来支付 |
-|------|---------------------|---------|
-| Deposit | ✅ | 用户支付 |
-| Create Proxy Wallet | ❌ | 第一版本不支持 |
+| Scenario | Gas fee required | Who pays |
+|----------|------------------|----------|
+| Deposit | ✅ | User |
+| Create Proxy Wallet | ❌ | Not supported in v1 |
 ```
 
 ---
 
-### 模式 4：异常场景独立成节（Edge Cases as First-Class Citizens）
+### Pattern 4: Edge Cases as First-Class Citizens
 
-**不在正常流程里穿插异常处理，单独收集。**
+**Do not weave exception handling into the happy path — collect it separately.**
 
 ```markdown
-### 3.1.4 异常场景
+### 3.1.4 Edge Cases
 
-| 场景 | 描述 |
-|------|------|
-| 认证取消 | 用户关闭授权弹窗、取消授权、拒绝签名 → 返回登录页，toast 提示 `Authorization cancelled` |
-| 认证失败 | 第三方接口失败、系统异常、网络异常 → 返回登录页，toast 提示 `Login failed, please try again` |
-| 账号冲突 | 当前第三方凭证已绑定其他账号 → 禁止自动注册，提示切换方式或联系客服 |
-| token 失效 | 已登录但 token 过期 → 清空本地登录态，重新拉起登录页 |
-| 绑定失败 | 登录成功但 promo code / 钱包绑定后处理失败 → 不影响主账号登录，但提示功能未生效 |
+| Scenario | Description |
+|----------|-------------|
+| Auth cancelled | User closes the authorization modal, cancels approval, or rejects signature → return to login page, show toast `Authorization cancelled` |
+| Auth failed | Third-party API failure, system error, network error → return to login page, show toast `Login failed, please try again` |
+| Account conflict | Third-party credential already bound to another account → block auto-registration; prompt user to switch method or contact support |
+| Token expired | Logged in but token has expired → clear local auth state, redirect to login page |
+| Binding failed | Login succeeded but promo code / wallet binding post-processing failed → do not affect primary account login, but notify user that feature is inactive |
 ```
 
-**为什么有效**：开发者可以先把 happy path 做完，再统一处理所有 edge case——不遗漏。
+**Why it works**: Developers can complete the happy path first, then handle all edge cases systematically — nothing gets missed.
 
 ---
 
-### 模式 5：领域概念内嵌教育（Domain Education）
+### Pattern 5: Domain Education Inline
 
-**当功能涉及专业领域（博彩、金融、链上交互），在 PRD 中直接用通俗语言 + 场景示例解释。**
+**When a feature involves a specialized domain (sports betting, finance, on-chain interactions), explain concepts directly in the PRD using plain language and concrete examples.**
 
 ```markdown
-#### 1x2（独赢）
+#### 1x2 (Match Result)
 
-最简单的玩法，猜谁赢。三个选项：主队赢、平局、客队赢。
-比如巴西 vs 法国，你买巴西赢，赔率 2.10，押 100 赢 210。
+The simplest bet type — pick who wins. Three options: home win, draw, away win.
+For example: Brazil vs France. You bet on Brazil. Odds 2.10. Stake 100 → payout 210.
 
-#### Asian Handicap（让球）
+#### Asian Handicap
 
-给弱队加分，平衡两队实力差距。比如巴西让法国 0.5 球，
-意思是巴西至少赢 1 球你才算赢。消除了平局结果，只有赢或输。
+Give the underdog a head start to balance the skill gap. For example, Brazil gives France a 0.5-ball handicap — Brazil must win by at least 1 goal for your bet to win. Eliminates the draw outcome; result is win or lose only.
 
-**场景：巴西 vs 沙特阿拉伯**
-巴西强得多，所以 1x2 赔率没意思（巴西赢赔率可能只有 1.10）。
-让球的作用是**给巴西加难度**，让比赛更公平，赔率更好看。
+**Scenario: Brazil vs Saudi Arabia**
+Brazil is far stronger, so 1x2 odds are uninteresting (Brazil win odds might be just 1.10).
+The handicap's purpose is to **make Brazil's task harder**, leveling the playing field and producing more attractive odds.
 
-**巴西 -1.5 球是什么意思：**
-巴西要赢**至少 2 球**，你买巴西才算赢。
-- 巴西赢 3:0 → 你赢 ✅
-- 巴西赢 1:0 → 你输 ❌（赢了但没赢够）
+**What does Brazil -1.5 mean:**
+Brazil must win by **at least 2 goals** for your bet to win.
+- Brazil wins 3:0 → you win ✅
+- Brazil wins 1:0 → you lose ❌ (won, but not by enough)
 ```
 
-**适用场景**：开发者不是领域专家时，PRD 需要兼任「迷你培训手册」。
+**Use cases**: When developers are not domain experts, the PRD needs to double as a "mini training manual".
 
 ---
 
-### 模式 6：埋点作为一等公民（Analytics Tracking Spec）
+### Pattern 6: Analytics Tracking as First-Class Citizens
 
-独立章节，结构化表格定义每个埋点事件。
+Dedicated section with a structured table defining every tracking event.
 
 ```markdown
-## 5. 埋点
+## 5. Analytics Tracking
 
 ### 1. Deposit
 
-| 业务 | 埋点事件 | 行为类型 | 行为 | 站点 | page_id | block_id | location_id | 业务参数 | 是否上报曝光 | 上报时机 |
-|------|--------|--------|------|------|---------|----------|------------|--------|-----------|---------|
-| Deposit | 弹窗曝光 | 事件曝光 | 曝光 | WebsitWallet | Deposit | Deposit | 1 | | 1 | |
-| | 点击事件 | | 点击 | | | | | 参数: WalletAddress | | |
+| Business | Event | Behavior Type | Action | Site | page_id | block_id | location_id | Business Params | Track Impression | Trigger Timing |
+|----------|-------|---------------|--------|------|---------|----------|-------------|-----------------|------------------|----------------|
+| Deposit | Modal impression | Event impression | Impression | WebsitWallet | Deposit | Deposit | 1 | | 1 | |
+| | Click event | | Click | | | | | Param: WalletAddress | | |
 ```
 
-**字段约定**：
-- `行为类型`：事件曝光 / 结果事件
-- `行为`：曝光 / 点击 / 成功/失败
-- `业务参数`：枚举值用 `0/1/2/3` + 含义映射（如 `0:Google; 1:TG; 2:Walletkit`）
+**Field conventions**:
+- `Behavior Type`: Event impression / Result event
+- `Action`: Impression / Click / Success / Failure
+- `Business Params`: Enum values use `0/1/2/3` + meaning mapping (e.g., `0:Google; 1:TG; 2:Walletkit`)
 
 ---
 
-## 三、视觉标记系统（Typography Conventions）
+## III. Visual Marking System (Typography Conventions)
 
-| 标记 | 含义 | 使用场景 |
-|------|------|---------|
-| ~~删除线~~ | 暂不开发 / 已废弃 | 功能裁剪时保留上下文但标记不做 |
-| **红色文字** | 待确认 / 重要警告 | 需要产品/技术进一步讨论的点 |
-| ✅ / ❌ | 支持 / 不支持 | 功能矩阵、对比表 |
-| → 箭头 | 流程转换 | 步骤衔接（`前端发 nonce → 用户签名 → 后端验签 → 登录成功`） |
-| `代码块` | 按钮文案 / 字段占位符 / Toast 文案 | 精确定义 UI 文案（`Enter promo code`） |
-| > 引用块 | 注意事项 / 备注 | 补充说明不打断主流程 |
-| **加粗** | 关键决策 / 强调 | 突出必须遵守的规则 |
-
----
-
-## 四、语言风格规则
-
-1. **中英混用锚定**：技术术语、按钮文案、字段名保留英文（Sign in、Deposit、Token、Gas fee），描述用中文
-2. **句式极简**：不写"我们认为用户可能需要"，直接写"展示 XXX"、"规则：XXX"
-3. **不写空话**：删掉"用户体验至关重要"、"我们致力于打造"这类废话
-4. **一句话一个规则**：每个 bullet 只说一件事
-5. **用动词开头**：展示、调用、判断、返回、提示、清空、禁止
-6. **待确认项显式标注**：不含糊，用红色或 `待确认` 标签明确标出
+| Marker | Meaning | When to Use |
+|--------|---------|-------------|
+| ~~strikethrough~~ | Not building / deprecated | Keep context when cutting features; mark as not in scope |
+| **red text** | To be confirmed / important warning | Points that require further discussion between product/engineering |
+| ✅ / ❌ | Supported / Not supported | Feature matrix, comparison tables |
+| → arrow | Flow transition | Step connectors (`frontend sends nonce → user signs → backend verifies → login succeeds`) |
+| `code block` | Button copy / field placeholder / toast copy | Precisely define UI copy (`Enter promo code`) |
+| > blockquote | Notes / remarks | Supplemental info that doesn't interrupt the main flow |
+| **bold** | Key decisions / emphasis | Highlight rules that must be followed |
 
 ---
 
-## 五、流程图规范
+## IV. Language Style Rules
 
-**复杂流程必须在文末提供完整流程图**（而非散落在各小节中）。
-
-流程图要素：
-- 用色块区分不同阶段（如 Sign in/up 用一个色块，入金用另一个色块）
-- 菱形 = 判断节点（"是否已有钱包？"、"是否平台 Token？"）
-- 矩形 = 操作步骤
-- 分支清晰，Y/N 标注明确
+1. **Bilingual anchoring**: Technical terms, button copy, and field names stay in English (Sign in, Deposit, Token, Gas fee); descriptions are written in the team's primary language
+2. **Extreme conciseness**: Do not write "We believe users might need" — write "Display XXX" or "Rule: XXX" directly
+3. **No filler**: Delete phrases like "User experience is paramount" or "We are committed to building"
+4. **One rule per bullet**: Each bullet point says exactly one thing
+5. **Start with a verb**: Display, Call, Evaluate, Return, Notify, Clear, Prohibit
+6. **Make TBDs explicit**: No ambiguity — use a red label or `TBD` tag to clearly mark unresolved items
 
 ---
 
-## 六、补充规则收尾模式
+## V. Flowchart Standards
 
-在每个大功能模块末尾，用分类表收集跨场景的通用约束：
+**Complex flows must include a complete flowchart at the end of the document** (not scattered across individual sections).
+
+Flowchart elements:
+- Use color blocks to distinguish different phases (e.g., Sign in/up in one color block, deposit in another)
+- Diamonds = decision nodes ("Does the user already have a wallet?", "Is it a platform token?")
+- Rectangles = action steps
+- Branches are clear; Y/N labels are explicit
+
+---
+
+## VI. Supplemental Rules Closing Pattern
+
+At the end of each major feature module, use a categorized table to collect cross-scenario general constraints:
 
 ```markdown
-### 3.1.5 补充规则
+### 3.1.5 Supplemental Rules
 
-| 类别 | 规则 |
-|------|------|
-| 统一原则 | Sign in / Sign up 前端尽量合流，不做复杂分叉 |
-| 安全要求 | 第三方登录必须校验授权 token 合法性 |
-| 安全要求 | 钱包登录必须校验签名，不接受仅连接钱包即登录 |
-| 体验要求 | 所有认证失败必须给出明确错误提示 |
-| 体验要求 | 登录成功后页面跳转要明确，不允许停留在无状态中间页 |
+| Category | Rule |
+|----------|------|
+| General principle | Sign in / Sign up should share as much frontend flow as possible; avoid complex branching |
+| Security requirement | Third-party login must validate the authorization token |
+| Security requirement | Wallet login must verify the signature; connecting the wallet alone is not sufficient for login |
+| UX requirement | All authentication failures must display a clear error message |
+| UX requirement | After successful login, page navigation must be deterministic; do not leave the user on a stateless intermediate page |
 ```
 
 ---
 
-## 七、使用方法
+## VII. How to Use
 
-### 当用户说"写一份 PRD"时：
+### When the user says "write a PRD":
 
-1. **确认功能复杂度** → 选择重量级或中量级模板
-2. **列出用户旅程阶段** → 按阶段拆分章节
-3. **每个阶段用「展示内容 + 规则」双栏** → 零歧义
-4. **结构化信息一律用表格** → 字段表、对比表、状态矩阵
-5. **异常场景单独收集** → 不在 happy path 里穿插
-6. **专业概念内嵌解释** → 开发者能读懂业务语义
-7. **埋点规范独立章节** → 事件粒度到按钮级
-8. **复杂流程画流程图** → 文末收尾
-9. **视觉标记系统** → 删除线、红色、勾叉统一用法
-10. **排期表（可选）** → 甘特图 + 职责分工
+1. **Confirm feature complexity** → choose heavyweight or medium-weight template
+2. **List user journey phases** → split into sections by phase
+3. **Apply "Display Content + Rules" two-column format to each phase** → zero ambiguity
+4. **All structured information in tables** → field tables, comparison tables, state matrices
+5. **Collect edge cases separately** → do not interleave with the happy path
+6. **Embed explanations of domain concepts** → developers can understand the business semantics
+7. **Dedicated analytics tracking section** → event granularity down to the button level
+8. **Draw a flowchart for complex flows** → close out at the end of the document
+9. **Visual marking system** → consistent use of strikethrough, bold, checkmarks
+10. **Schedule table (optional)** → Gantt chart + responsibility assignments
 
-### 当用户说"review 这份 PRD"时：
+### When the user says "review this PRD":
 
-检查清单：
-- [ ] 是否每个功能点都有「展示内容 + 规则」双栏？
-- [ ] 异常场景是否独立成节？是否覆盖了取消/失败/冲突/超时/降级？
-- [ ] 结构化信息是否用了表格而非散文？
-- [ ] 待确认项是否用红色/标签显式标注？
-- [ ] 按钮文案、Toast 文案是否用代码块精确定义？
-- [ ] 是否有流程图收尾？
-- [ ] 是否有埋点定义？
-- [ ] 领域专业概念是否有通俗解释？
+Review checklist:
+- [ ] Does every feature point have the "Display Content + Rules" two-column format?
+- [ ] Are edge cases in a dedicated section? Are cancel / failure / conflict / timeout / degradation scenarios covered?
+- [ ] Is structured information in tables rather than prose?
+- [ ] Are TBD items explicitly marked with a red label or tag?
+- [ ] Are button copy, toast copy defined precisely in code blocks?
+- [ ] Is there a flowchart at the end?
+- [ ] Are analytics events defined?
+- [ ] Are domain-specific concepts explained in plain language?

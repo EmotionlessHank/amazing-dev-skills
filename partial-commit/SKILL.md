@@ -1,70 +1,70 @@
 ---
 allowed-tools: Bash(git *), Bash(pnpm type-check*), Bash(pnpm test*), Bash(pnpm lint*)
-description: 部分提交 — 仅提交当前会话的修改，不影响其他 tab 的改动
+description: Partial commit — commit only changes made in the current session, leaving other tabs' modifications untouched
 ---
 
-# Partial Commit — 部分提交
+# Partial Commit — Session-Scoped Commit
 
-仅提交当前会话产生的改动，排除其他并行 tab 的修改。
+Commit only the changes produced in the current session, excluding modifications from other parallel tabs.
 
-## Step 1: 提取初始脏文件
+## Step 1: Extract Initial Dirty Files
 
-从本次对话开头的 `gitStatus:` 系统消息中，提取会话启动时已存在的脏文件列表（modified / untracked / deleted）。
-记为 `INITIAL_DIRTY`。
+From the `gitStatus:` system message at the start of this conversation, extract the list of dirty files (modified / untracked / deleted) that existed when the session began.
+Record this as `INITIAL_DIRTY`.
 
-如果 gitStatus 中 Status 为空（开局干净），则 `INITIAL_DIRTY = []`。
+If the Status in gitStatus was clean at session start, then `INITIAL_DIRTY = []`.
 
-## Step 2: 获取当前状态
+## Step 2: Get Current State
 
-运行 `git status --porcelain` 和 `git diff --name-only`，获取当前所有脏文件。
-记为 `CURRENT_DIRTY`。
+Run `git status --porcelain` and `git diff --name-only` to get all currently dirty files.
+Record this as `CURRENT_DIRTY`.
 
-## Step 3: 分类
+## Step 3: Classify
 
-回顾当前对话历史，检查哪些文件使用过 Write / Edit / Bash(sed/awk/cp/mv) 工具修改过。记为 `SESSION_EDITED`。
+Review the current conversation history and identify which files were modified using the Write / Edit / Bash(sed/awk/cp/mv) tools. Record these as `SESSION_EDITED`.
 
-按以下规则将 CURRENT_DIRTY 中的每个文件分为三类：
+Classify each file in `CURRENT_DIRTY` into one of three categories:
 
-| 条件 | 分类 | 标记 |
-|------|------|------|
-| 不在 INITIAL_DIRTY 中 | 本会话改动 | ✅ |
-| 在 INITIAL_DIRTY 中 **且** 在 SESSION_EDITED 中 | 存疑文件 | ⚠️ |
-| 在 INITIAL_DIRTY 中 **且不在** SESSION_EDITED 中 | 其他 tab 改动 | 🚫 |
+| Condition | Classification | Marker |
+|-----------|---------------|--------|
+| Not in INITIAL_DIRTY | Changed in this session | ✅ |
+| In INITIAL_DIRTY **and** in SESSION_EDITED | Uncertain — needs confirmation | ⚠️ |
+| In INITIAL_DIRTY **and not in** SESSION_EDITED | Changed by another tab | 🚫 |
 
-## Step 4: 展示并确认
+## Step 4: Display and Confirm
 
-向用户展示分类结果：
+Show the classification to the user:
 
 ```
-✅ 本会话改动（将提交）:
+✅ Changed in this session (will be committed):
   M  app/[locale]/not-found.tsx
   A  app/[locale]/[...rest]/page.tsx
 
-⚠️ 存疑（会话前已脏 + 本会话也改过，请确认是否纳入）:
+⚠️ Uncertain (dirty before session + also edited this session — confirm inclusion):
   M  components/ui/Button.tsx
 
-🚫 其他 tab 改动（不提交）:
+🚫 Changed by another tab (will not be committed):
   M  components/referral/ReferralPage.tsx
 ```
 
-等待用户确认最终提交范围。用户可以：
-- 直接确认
-- 要求加入/排除某些文件
-- 取消提交
+Wait for the user to confirm the final commit scope. The user may:
+- Approve as-is
+- Request to include or exclude specific files
+- Cancel the commit
 
-**未经用户确认，不得执行 git add / git commit。**
+**Do not run `git add` or `git commit` without explicit user confirmation.**
 
-## Step 5: 提交
+## Step 5: Commit
 
-用户确认后：
+Once the user confirms:
 
-1. 运行 `git diff -- <files>` 查看将提交的具体改动
-2. 运行 `git log --oneline -5` 参考 commit message 风格
-3. 仅 `git add <file1> <file2> ...` 逐个添加确认的文件（禁止 `git add -A` / `git add .`）
-4. 生成 commit message 并提交
+1. Run `git diff -- <files>` to review the exact changes being committed
+2. Run `git log --oneline -5` to reference the commit message style
+3. Run `git add <file1> <file2> ...` to stage only the confirmed files one by one (never use `git add -A` or `git add .`)
+4. Generate a commit message and commit
 
-## 约束
+## Constraints
 
-- commit message 必须简体中文，禁止 Co-Authored-By
-- 提交前运行 type-check 确认无类型错误（lint/test 由 pre-commit hook 自动执行）
-- 如果 ✅ 和 ⚠️ 均为空（本会话无改动），直接告知用户"当前会话无新改动需要提交"，不执行任何 git 操作
+- Commit messages must be in English; Co-Authored-By is not required
+- Run type-check before committing to confirm there are no type errors (lint/test run automatically via pre-commit hook)
+- If both ✅ and ⚠️ are empty (no new changes this session), inform the user "No new changes to commit in this session" and perform no git operations

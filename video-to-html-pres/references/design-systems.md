@@ -5,45 +5,45 @@ Source: https://github.com/VoltAgent/awesome-design-md/tree/main/design-md
 ## Selection Decision Tree
 
 ```
-1. 检查 memory/creator-styles.json
-   → creator 已知? → 直接用存储的 design_style，跳到步骤 4
-   → 未知? → 继续步骤 2
+1. Check memory/creator-styles.json
+   → Creator known? → Use the stored design_style, skip to step 4
+   → Unknown? → Continue to step 2
 
-2. 分析视频主题关键词
-   → 匹配 theme_keywords 表
-   → 有命中? → 用对应 style
-   → 无命中? → 继续步骤 3
+2. Analyze video theme keywords
+   → Match against theme_keywords table
+   → Match found? → Use the corresponding style
+   → No match? → Continue to step 3
 
-3. 主动判断：
-   → 读取视频标题 + 前30s字幕
-   → 判断情绪基调：严肃/活泼/技术/情感/娱乐
-   → 参考下方选择矩阵选出最匹配的风格
-   → 向用户确认（"我判断应该用 ElevenLabs 风格，因为…，你确认吗？"）
+3. Make an active judgment:
+   → Read video title + first 30s of captions
+   → Assess emotional tone: serious / upbeat / technical / emotional / entertainment
+   → Use the selection matrix below to pick the best-fit style
+   → Confirm with user ("I think ElevenLabs style fits best because… — does that work for you?")
 
-4. 从 VoltAgent repo 获取对应 DESIGN.md token
+4. Fetch the corresponding DESIGN.md tokens from the VoltAgent repo
    → URL: https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/{style}/DESIGN.md
-   → 提取: colors / typography / spacing / component tokens
-   → 如网络受限，使用 memory/creator-styles.json 中的内置 token
+   → Extract: colors / typography / spacing / component tokens
+   → If network is unavailable, use the built-in tokens in memory/creator-styles.json
 
-5. 更新 memory/creator-styles.json（新 creator 或新主题）
+5. Update memory/creator-styles.json (for new creators or new themes)
 ```
 
-## 风格选择矩阵
+## Style Selection Matrix
 
-| 视频情绪/主题    | 推荐风格     | 原因                          |
-|----------------|-------------|-------------------------------|
-| 金融·财富·人生  | elevenlabs  | 暗黑电影感，权威感，适合严肃内容 |
-| AI·科技·未来    | minimax     | 霓虹粗体，冲击力强              |
-| 开发·工具·SaaS  | cursor      | 代码感，克制精准                |
-| 音乐·娱乐·创作  | spotify     | 绿色活力，封面主导              |
-| 极简·产品·发布  | vercel      | 纯粹黑白，无噪音                |
-| 设计·创意·视觉  | figma       | 彩色活泼，专业设计感            |
-| 健康·生活·情感  | claude      | 暖棕色调，柔和亲切              |
+| Video mood / theme          | Recommended style | Rationale                                        |
+|-----------------------------|-------------------|--------------------------------------------------|
+| Finance · wealth · life     | elevenlabs        | Dark cinematic feel, authoritative, suits serious content |
+| AI · tech · future          | minimax           | Neon bold, high visual impact                    |
+| Dev · tools · SaaS          | cursor            | Code aesthetic, restrained and precise           |
+| Music · entertainment · creative | spotify      | Green energy, album-art-driven                   |
+| Minimal · product · launch  | vercel            | Pure black-and-white, zero noise                 |
+| Design · creative · visual  | figma             | Colorful and lively, professional design feel    |
+| Health · lifestyle · emotion | claude           | Warm brown tones, soft and approachable          |
 
-## ElevenLabs Token（内置，无需网络）
+## ElevenLabs Tokens (built-in — no network required)
 
 ```css
-/* 已在本 session 验证可用 */
+/* Verified usable in this session */
 --bg:       #0c0a09;   /* canvas-deep */
 --elev:     #1c1917;   /* surface-dark-elevated */
 --soft:     #a8a29e;   /* on-dark-soft */
@@ -60,17 +60,17 @@ Source: https://github.com/VoltAgent/awesome-design-md/tree/main/design-md
 /* no neon, no saturated CTA, atmospheric photography aesthetic */
 ```
 
-## 文件命名规则
+## File Naming Convention
 
 ```
-序号-creator-标题.html
-序号-creator-标题.vtt
+{seq}-{creator}-{title}.html
+{seq}-{creator}-{title}.vtt
 
-序号: 三位数字，按 creator 维度递增（memory 中记录）
-creator: 小写，去空格（孙哥→sunge，李笑来→lxl）
-标题: 视频标题精简版，中文保留，去特殊符号，空格用连字符
+seq:     three-digit number, incremented per creator (tracked in memory)
+creator: lowercase, no spaces (e.g. 孙哥→sunge, 李笑来→lxl)
+title:   condensed video title, Chinese characters preserved, special chars stripped, spaces replaced with hyphens
 
-示例:
+Examples:
   001-sunge-财务目标从100万到一个亿.html
   001-sunge-财务目标从100万到一个亿.vtt
   002-sunge-如何选择人生第一份工作.html

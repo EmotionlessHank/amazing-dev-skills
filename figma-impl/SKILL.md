@@ -1,65 +1,65 @@
 ---
 name: figma-impl
-description: Figma 像素级还原强制流程。当用户说 "/figma-impl"、"还原 Figma"、"按 Figma 实现"、"像素还原"、"Figma 适配" 时触发。将 LESSONS §14 的 6 步 SOP 从文档变成结构化流程，每步设门控，杜绝跳步导致的返工。
+description: Enforced pixel-perfect Figma implementation workflow. Triggers on "/figma-impl", "implement from Figma", "Figma pixel-perfect", "Figma adaptation". Elevates the 6-step SOP from LESSONS §14 from a reference document into a structured enforced process with gate checks at every step, eliminating rework caused by skipping steps.
 version: 1.0.0
 ---
 
-# /figma-impl — Figma 像素级还原强制流程
+# /figma-impl — Pixel-Perfect Figma Implementation
 
-将 LESSONS §14 的 6 步 SOP 从"建议文档"提升为"强制流程"。每一步设门控，不完成不允许进入下一步。
+Elevates the 6-step SOP from LESSONS §14 from "advisory document" to "enforced process". Each step has a gate check — you cannot proceed to the next step until the current one is complete.
 
-**设计背景**：历史数据显示 Figma 还原任务的 fix commit 比率 >50%（swap-figma 50%, betslip 78%），根因是 AI 跳过截图获取和视觉对比步骤。本 Skill 通过结构化流程消除跳步。
-
----
-
-## 输入
-
-用户提供以下信息（缺少时主动询问）：
-
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| Figma 节点 ID 或链接 | 是 | 要还原的设计稿节点 |
-| 目标文件路径 | 否 | 要修改/创建的组件文件（可在 Step 1 后确定） |
-| 实现范围 | 否 | 单组件 / 整页（默认单组件，整页则自动拆分） |
+**Design rationale**: Historical data shows fix-commit rates > 50% on Figma implementation tasks (swap-figma 50%, betslip 78%). The root cause is AI skipping screenshot capture and visual comparison steps. This skill eliminates step-skipping through a structured gate-controlled workflow.
 
 ---
 
-## 整页拆分规则（强制）
+## Inputs
 
-如果用户给的节点是整个页面（而非单组件），**必须先拆分为组件列表**，逐个走完整 Cycle。
+Collect the following from the user (ask if missing):
 
-```
-整页节点
-  → 用 get_metadata 识别子组件边界
-  → 拆分为 N 个独立组件/区块
-  → 列出实现顺序（从上到下、从外到内）
-  → 用户确认拆分方案
-  → 逐个组件执行下方 6 步 Cycle
-```
-
-**禁止行为**：整页一次性实现完再截图对比。
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| Figma node ID or link | Yes | The design node to implement |
+| Target file path | No | Component file to modify/create (can be determined after Step 1) |
+| Implementation scope | No | Single component / full page (default: single component; full page auto-splits) |
 
 ---
 
-## 6 步 Cycle（每个组件/区块执行一遍）
+## Full-Page Split Rules (Mandatory)
 
-### Step 1: 节点确认 ⛔ 门控
-
-```
-操作:
-  1. 调用 get_metadata({nodeId}) 查看节点层级
-  2. 确认节点是最外层容器（Modal → overlay 层，Card → 最外层 frame）
-  3. 如果用户给的是子节点 → 主动往上找父容器并告知用户
-
-门控条件: 必须确认节点粒度正确后才能继续
-输出: "节点确认: {nodeId} — {节点名称}（{层级位置}）"
-```
-
-### Step 2: 获取设计数据 ⛔ 门控
+If the user provides a full-page node (not a single component), **split it into a component list first**, then run through the full Cycle for each one individually.
 
 ```
-操作:
-  调用 get_design_context({
+Full-page node
+  → Use get_metadata to identify sub-component boundaries
+  → Split into N independent components/sections
+  → List implementation order (top-to-bottom, outer-to-inner)
+  → User confirms the split plan
+  → Run the 6-step Cycle below for each component
+```
+
+**Prohibited**: Implementing the entire page at once and only then comparing screenshots.
+
+---
+
+## 6-Step Cycle (Run once per component/section)
+
+### Step 1: Node Confirmation ⛔ Gate
+
+```
+Actions:
+  1. Call get_metadata({nodeId}) to inspect node hierarchy
+  2. Confirm the node is the outermost container (Modal → overlay layer, Card → outermost frame)
+  3. If the user gave a child node → proactively find its parent container and inform the user
+
+Gate condition: Node granularity must be confirmed before continuing
+Output: "Node confirmed: {nodeId} — {node name} ({hierarchy position})"
+```
+
+### Step 2: Fetch Design Data ⛔ Gate
+
+```
+Actions:
+  Call get_design_context({
     nodeId: "...",
     forceCode: true,
     clientLanguages: "typescript,css",
@@ -67,182 +67,182 @@ version: 1.0.0
     artifactType: "COMPONENT_WITHIN_A_WEB_PAGE_OR_APP_SCREEN"
   })
 
-门控条件: 必须传 forceCode: true（Hook 也会检查）
-输出: 保存返回的结构化代码，标记所有 localhost 资源 URL
+Gate condition: forceCode: true must be passed (the hook also checks for this)
+Output: Save the returned structured code; flag all localhost asset URLs
 ```
 
-### Step 3: 获取视觉基准 ⛔ 阻断门控（最关键）
+### Step 3: Capture Visual Baseline ⛔ Hard Block Gate (Most Critical)
 
 ```
-操作:
-  调用 get_screenshot({nodeId}) 获取 Figma 截图
+Actions:
+  Call get_screenshot({nodeId}) to capture the Figma screenshot
 
-门控条件: 截图必须成功获取并保存
-  - 截图存放: .screenshots/figma-{nodeId}-baseline.png
-  - 失败时: 重试一次，仍失败则暂停并告知用户
+Gate condition: Screenshot must be successfully captured and saved
+  - Save path: .screenshots/figma-{nodeId}-baseline.png
+  - On failure: retry once; if still failing, pause and notify the user
 
-输出: "视觉基准已获取: .screenshots/figma-{nodeId}-baseline.png"
+Output: "Visual baseline captured: .screenshots/figma-{nodeId}-baseline.png"
 
-⛔ 此步是硬阻断: 没有视觉基准就开始实现 = 盲写代码，禁止继续。
+⛔ This is a hard block: implementing without a visual baseline = coding blind. Do not proceed.
 ```
 
-### Step 4: 资源处理
+### Step 4: Asset Handling
 
 ```
-操作:
-  1. 扫描 Step 2 返回代码中的所有 http://localhost:3845/assets/ URL
-  2. 按以下规则分类处理:
+Actions:
+  1. Scan all http://localhost:3845/assets/ URLs in the Step 2 code output
+  2. Classify and handle each by the following rules:
 
-  A. 通用 UI 图标（菜单/箭头/搜索/关闭/设置等）:
-     → 禁止下载 SVG
-     → 从 @phosphor-icons/react 找对应图标（必须加 Icon 后缀）
-     → Phosphor 找不到 → 立即告知用户，等待指示
+  A. Generic UI icons (menu / arrow / search / close / settings / etc.):
+     → Do NOT download the SVG
+     → Find the corresponding icon in @phosphor-icons/react (must include the Icon suffix)
+     → If not found in Phosphor → immediately notify the user and wait for instructions
 
-  B. 品牌/自定义图标（Logo/代币/赛事特有图标等）:
-     → curl 下载到 public/ 对应子目录
-     → 自定义 SVG 图标抽成 components/icons/XxxIcon.tsx
+  B. Brand / custom icons (Logo / tokens / event-specific icons / etc.):
+     → curl download to the appropriate subdirectory under public/
+     → Extract custom SVG icons as components/icons/XxxIcon.tsx
 
-  C. 无法判断的图标:
-     → 列出图标截图/描述，询问用户属于 A 还是 B
+  C. Ambiguous icons:
+     → List screenshots/descriptions of each icon and ask the user whether it falls under A or B
 
-输出: 资源处理清单（每项标注: Phosphor/下载/待确认）
+Output: Asset handling inventory (each item labeled: Phosphor / downloaded / pending confirmation)
 ```
 
-### Step 5: 实现代码
+### Step 5: Implement Code
 
 ```
-操作:
-  1. 转录 MCP 精确像素值（禁止替换为 Tailwind 语义 class）:
-     - gap-[32px] → 写 gap-[32px]，禁止 gap-8
-     - p-[40px] → 写 p-[40px]，禁止 p-10
-     - rounded-bl-[16px] → 写 rounded-bl-[16px]，禁止 rounded-l-2xl
-     唯一例外: tailwind.config.ts 中已有精确匹配的 Design Token
+Actions:
+  1. Transcribe exact pixel values from MCP output (do not substitute Tailwind semantic classes):
+     - gap-[32px] → write gap-[32px], NOT gap-8
+     - p-[40px] → write p-[40px], NOT p-10
+     - rounded-bl-[16px] → write rounded-bl-[16px], NOT rounded-l-2xl
+     Only exception: an exact matching Design Token exists in tailwind.config.ts
 
-  2. 颜色处理:
-     - 有 var(--xxx) 的 → 使用对应 Design Token
-     - 裸 hex/rgba（Figma 硬编码）→ 写裸值 + @figma-hardcoded 注释
-     - 禁止自行创建新 Token
+  2. Color handling:
+     - Has a var(--xxx) → use the corresponding Design Token
+     - Bare hex/rgba (Figma hard-coded) → write raw value + @figma-hardcoded comment
+     - Do NOT create new tokens on your own
 
-  3. 效果类属性（透明度/模糊/阴影/渐变）:
-     - 先 grep 项目中同类效果的已有实现
-     - 以项目已有参数为基准适配，不直接复制 Figma 值
-     - 必须结合实际渲染环境判断
+  3. Effect properties (opacity / blur / shadow / gradient):
+     - First grep the project for existing implementations of the same effect type
+     - Adapt using existing project parameters as the baseline; do not copy Figma values directly
+     - Must account for the actual rendering environment
 
-  4. 文件修改限制: 单次不超过 3 个文件
+  4. File modification limit: no more than 3 files per pass
 
-输出: 实现完成的代码（已通过 PostToolUse type-check hook）
+Output: Implemented code (already passed PostToolUse type-check hook)
 ```
 
-### Step 6: 视觉验收 ⛔ 交付门控
+### Step 6: Visual Acceptance ⛔ Delivery Gate
 
 ```
-操作:
-  1. 在浏览器中打开实现结果
-  2. 截图当前实现: browser_take_screenshot 或 chrome-devtools take_screenshot
-     - 截图存放: .screenshots/impl-{component}-current.png
-  3. 与 Step 3 的 Figma 基准截图逐项对比:
+Actions:
+  1. Open the implementation in a browser
+  2. Take a screenshot of the current implementation: browser_take_screenshot or chrome-devtools take_screenshot
+     - Save to: .screenshots/impl-{component}-current.png
+  3. Compare against the Figma baseline screenshot from Step 3:
 
-  对比清单:
-  □ 整体布局结构（元素排列/层级关系）
-  □ 间距（padding/margin/gap）
-  □ 颜色（文字色/背景色/边框色）
-  □ 圆角（border-radius）
-  □ 字号/字重（font-size/font-weight）
-  □ 图标（正确性/尺寸/颜色）
-  □ 特效（阴影/模糊/渐变）
+  Comparison checklist:
+  □ Overall layout structure (element arrangement / hierarchy)
+  □ Spacing (padding / margin / gap)
+  □ Colors (text / background / border)
+  □ Border radius
+  □ Font size / font weight
+  □ Icons (correctness / size / color)
+  □ Effects (shadow / blur / gradient)
 
-  4. 偏差处理:
-     - 发现偏差 → 当场修复 → 重新截图 → 再对比
-     - 单个组件最多 3 轮修正，超过 3 轮暂停并报告给用户
-     - 无偏差 → 进入交付
+  4. Handling discrepancies:
+     - Discrepancy found → fix immediately → re-screenshot → compare again
+     - Maximum 3 correction rounds per component; if still not matching after 3 rounds, pause and report to the user
+     - No discrepancies → proceed to delivery
 
-门控条件: 实现截图与 Figma 基准截图无可见偏差
-输出:
-  "✅ 视觉验收通过: {component_name}
-   Figma 基准: .screenshots/figma-{nodeId}-baseline.png
-   实现结果: .screenshots/impl-{component}-current.png"
-```
-
----
-
-## Cycle 完成后
-
-```
-1. 清理截图:
-   - 验收通过的截图可删除（节省空间）
-   - 或保留到整个任务完成后统一清理
-
-2. 如果是整页拆分模式:
-   - 标记当前组件为 ✅
-   - 输出进度: "完成 {M}/{N} 个组件"
-   - 自动进入下一个组件的 Cycle
-
-3. 如果是单组件模式:
-   - 直接完成
+Gate condition: Implementation screenshot must have no visible deviation from the Figma baseline
+Output:
+  "✅ Visual acceptance passed: {component_name}
+   Figma baseline: .screenshots/figma-{nodeId}-baseline.png
+   Implementation: .screenshots/impl-{component}-current.png"
 ```
 
 ---
 
-## 整体任务完成播报
+## After Each Cycle
+
+```
+1. Clean up screenshots:
+   - Screenshots that have passed acceptance can be deleted (to save space)
+   - Or keep them until the entire task is complete, then clean up all at once
+
+2. If in full-page split mode:
+   - Mark the current component as ✅
+   - Output progress: "Completed {M}/{N} components"
+   - Automatically start the Cycle for the next component
+
+3. If in single-component mode:
+   - Task complete
+```
+
+---
+
+## Overall Task Completion Summary
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Figma 还原完成
+✅ Figma Implementation Complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-组件数: {N} 个
-修改文件: {files list}
-修正轮数: {total rounds}（目标 ≤ 1 轮/组件）
-跳过步骤: 0（强制流程保障）
+Components: {N}
+Files modified: {files list}
+Correction rounds: {total rounds} (target: <= 1 round/component)
+Steps skipped: 0 (guaranteed by enforced workflow)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-## 可选参数
+## Optional Flags
 
-| 参数 | 说明 |
-|------|------|
-| `--pc-only` | 仅实现 PC 端（≥768px），跳过 H5 适配 |
-| `--h5-only` | 仅实现 H5 端（<768px），跳过 PC |
-| `--skip-effects` | 跳过效果类属性（阴影/模糊/渐变），后续单独处理 |
-| `--dry-run` | 仅执行 Step 1-4（分析+资源），不写代码 |
-
----
-
-## 异常处理
-
-| 场景 | 处理方式 |
-|------|---------|
-| get_design_context 返回截断 | 检查是否传了 forceCode: true；仍截断则拆分子节点分段获取 |
-| get_screenshot 失败 | 重试一次；仍失败则要求用户手动提供截图 |
-| Figma 节点 ID 无效 | 要求用户确认节点 ID，提供 get_metadata 辅助定位 |
-| 实现截图与 Figma 差异过大 | 3 轮修正后仍不匹配 → 暂停，输出差异清单，等用户指示 |
-| 浏览器未启动 | 提示用户启动开发服务器（pnpm dev）和浏览器 |
-| 效果类属性环境不匹配 | 优先使用项目已有同类效果的参数，标注适配原因 |
+| Flag | Description |
+|------|-------------|
+| `--pc-only` | Implement PC (≥768px) only, skip mobile |
+| `--h5-only` | Implement mobile (<768px) only, skip PC |
+| `--skip-effects` | Skip effect properties (shadow/blur/gradient) for separate handling later |
+| `--dry-run` | Run Steps 1–4 only (analysis + assets), do not write code |
 
 ---
 
-## 与其他基建的协同
+## Error Handling
 
-| 基建 | 协同方式 |
-|------|---------|
-| `figma-checkpoint.sh` Hook | Hook 在 get_design_context 后提醒截图；本 Skill 在流程中强制执行 |
-| `type-check.sh` Hook | Step 5 写代码后自动触发类型检查 |
-| `/patch-audit` Skill | 实现完成后可用 patch-audit 检查是否有补丁累积 |
-| `/quality-scan` Skill | 实现完成后可用 quality-scan 检查代码规范 |
-| LESSONS §14 | 本 Skill 是 §14 的可执行化身，规则来源一致 |
+| Scenario | Resolution |
+|----------|-----------|
+| get_design_context output is truncated | Check that forceCode: true was passed; if still truncated, split into sub-nodes and fetch in segments |
+| get_screenshot fails | Retry once; if still failing, ask the user to provide a screenshot manually |
+| Invalid Figma node ID | Ask the user to confirm the node ID; offer get_metadata to help locate it |
+| Implementation screenshot diverges too much from Figma | After 3 correction rounds with no match → pause, output a diff list, await user instructions |
+| Browser not running | Prompt the user to start the dev server (pnpm dev) and open a browser |
+| Effect properties don't match in the actual environment | Prioritize existing project parameters for the same effect type; document the adaptation rationale |
 
 ---
 
-## 反模式警告（历史教训）
+## Integration with Other Infrastructure
 
-以下行为在历史 session 中导致了 50%+ 的返工率，本 Skill 通过门控结构性禁止：
+| Infrastructure | Integration |
+|----------------|------------|
+| `figma-checkpoint.sh` Hook | The hook reminds to take a screenshot after get_design_context; this skill enforces it in the workflow |
+| `type-check.sh` Hook | Automatically triggers type checking after code is written in Step 5 |
+| `/patch-audit` Skill | Use patch-audit after implementation to check for patch accumulation |
+| `/quality-scan` Skill | Use quality-scan after implementation to check code standards |
+| LESSONS §14 | This skill is the executable form of §14; the rules are consistent |
 
-| 反模式 | 历史后果 | 本 Skill 如何阻止 |
-|--------|---------|------------------|
-| 不截图就实现 | swap-figma 10 个 fix commit | Step 3 硬阻断 |
-| 整页实现完才对比 | 偏差累积难以定位 | 整页强制拆分为组件 Cycle |
-| 用 Tailwind 语义 class 近似 | 间距/圆角普遍偏差 | Step 5 转录规则 |
-| 忽略 localhost 资源 URL | 组件缺图标/图片 | Step 4 强制处理 |
-| 效果类属性直接复制 Figma 值 | 毛玻璃/阴影在实际环境不可见 | Step 5 环境适配流程 |
-| 用 Phosphor 替代自定义图标 | 用户反复纠正 | Step 4 分类规则 + 不确定时询问 |
+---
+
+## Anti-Pattern Warnings (Historical Lessons)
+
+The following behaviors caused > 50% rework rates in past sessions. This skill structurally prevents them through gate checks:
+
+| Anti-pattern | Historical consequence | How this skill prevents it |
+|-------------|----------------------|--------------------------|
+| Implementing without a screenshot | swap-figma: 10 fix commits | Step 3 hard block |
+| Comparing only after full-page implementation | Accumulated discrepancies hard to isolate | Full page is forced to split into per-component cycles |
+| Using approximate Tailwind semantic classes | Spacing/radius deviations throughout | Step 5 transcription rules |
+| Ignoring localhost asset URLs | Components missing icons/images | Step 4 mandatory asset handling |
+| Copying effect properties directly from Figma | Frosted glass/shadow invisible in actual environment | Step 5 environment adaptation workflow |
+| Using Phosphor icons for custom brand icons | User repeatedly corrects it | Step 4 classification rules + ask when uncertain |

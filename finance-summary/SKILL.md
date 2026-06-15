@@ -1,47 +1,48 @@
-# /summary - 当前财务概况
+# /summary - Current Financial Snapshot
 
-## 触发方式
-用户输入 `/summary`
+## Trigger
 
-## 执行步骤
+User types `/summary`
 
-1. **读取所有上下文**
-   - 读取 `context/` 下全部 YAML 文件
+## Execution Steps
 
-2. **输出一页式概况**
-   快速展示当前财务全貌，不做深度分析：
+1. **Load All Context**
+   - Read all YAML files under `context/`
+
+2. **Output a One-Page Snapshot**
+   Display a quick overview of the current financial picture — no deep analysis:
 
    ```
    ═══════════════════════════════════════════
-     家庭财务概况 - YYYY-MM-DD
+     Household Financial Snapshot - YYYY-MM-DD
    ═══════════════════════════════════════════
 
-   👤 家庭：Hang & Yilin | Melbourne, VIC
-   🏠 住址：South Yarra
+   👤 Household: Hang & Yilin | Melbourne, VIC
+   🏠 Address: South Yarra
 
-   💰 账户
-   ├ ANZ Joint：$XX,XXX.XX
-   └ 安全线：$X,XXX（当前 [安全/警告]）
+   💰 Accounts
+   ├ ANZ Joint:    $XX,XXX.XX
+   └ Safety Floor: $X,XXX (currently [Safe / Warning])
 
-   📤 月度支出（估算）
-   ├ 租金：$X,XXX
-   ├ 生活费：$X,XXX
-   ├ 固定支出合计：$X,XXX
-   └ 月均总支出：$X,XXX
+   📤 Monthly Spending (estimated)
+   ├ Rent:               $X,XXX
+   ├ Living Expenses:    $X,XXX
+   ├ Fixed Costs Total:  $X,XXX
+   └ Total Monthly Avg:  $X,XXX
 
-   🎯 进行中的目标
-   ├ [优先级] 目标名 - 金额 - 截止日期
+   🎯 Active Goals
+   ├ [Priority] Goal Name - Amount - Deadline
    └ ...
 
-   💱 汇率（更新于 YYYY-MM-DD）
-   ├ USD→AUD：X.XX
-   └ RMB→AUD：X.XX
+   💱 Exchange Rates (updated YYYY-MM-DD)
+   ├ USD → AUD: X.XX
+   └ RMB → AUD: X.XX
 
-   🏦 海外储备
-   ├ 生活储备：¥XXX,XXX（约 $XX,XXX AUD）
-   └ 可用跑道：XX 个月
+   🏦 Overseas Reserves
+   ├ Living Reserve:  ¥XXX,XXX (approx. $XX,XXX AUD)
+   └ Available Runway: XX months
    ```
 
-3. **标注过期信息**
-   - 如果汇率超过 30 天未更新，提示用户更新
-   - 如果有目标已过 deadline，高亮提醒
+3. **Flag Stale Information**
+   - If exchange rates have not been updated in over 30 days, prompt the user to refresh them
+   - If any goal has passed its deadline, highlight it prominently

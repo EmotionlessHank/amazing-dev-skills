@@ -1,221 +1,221 @@
 ---
 name: feat
-description: 功能开发「方案阶段」全生命周期。当用户说 "/feat"、"开发功能"、"新增功能"、"实现 XX 功能"、"出方案"、"写 DD" 时触发。流程：需求范围分析 → 代码库真实调研（以代码为铁律·先拉最新·必要时只读查服务器）→ 协同整理 DD 方案 → 按需求等级拉 1-3 代理审方案 → 主流程处理审查意见 → 确认门控 → 交接 autopilot 开发。解决"忘记开分支/worktree"、"凭训练数据假设代码"、"方案未审未确认就编码"三大高频问题。
+description: Full lifecycle for the "planning phase" of feature development. Triggers when the user says "/feat", "develop feature", "add feature", "implement XX feature", "write a plan", or "write DD". Workflow: requirement scope analysis → real codebase research (code is ground truth · pull latest · read-only server verification when needed) → collaborative DD plan authoring → 1–3 review agents based on risk level → main flow handles review findings → confirmation gate → hand off to autopilot for development. Solves three high-frequency problems: "forgot to create a branch/worktree", "assumed code behavior from training data", and "coded before plan was reviewed and confirmed".
 version: 2.0.0
 ---
 
-# /feat — 功能开发方案阶段（研究 → 方案 → 审查 → 确认）
+# /feat — Feature Development Planning Phase (Research → Plan → Review → Confirm)
 
-> **多项目通用版。** `{占位符}` 为各项目定制点，迁移前先按 `SETUP.md` 替换。
-> **feat 管前半程（出一个经过调研+审查+确认的 DD），autopilot 管后半程（按 DD 批次开发+代码 review+交付）。**
+> **Multi-project universal version.** `{placeholders}` are project-specific customization points. Replace them per `SETUP.md` before migrating.
+> **feat owns the first half (producing a researched, reviewed, and confirmed DD); autopilot owns the second half (batch development per DD + code review + delivery).**
 
-核心信条：**代码是铁律。** 任何方案结论必须落在「读过的真实代码 / 拉到最新的本地仓库 / 只读核验过的服务器真实数据」上，**禁止凭训练数据、通用框架经验、或猜测**下结论。
-
----
-
-## 定位与边界
-
-| 阶段 | 归属 | 产物 |
-|------|------|------|
-| 需求范围分析 → 代码调研 → DD 方案 → 方案 review → 确认 | **feat（本技能）** | 经审查确认的 DD（需求子文件夹内） |
-| 批次开发 → 代码 review → 修复 → 归档验收 | **autopilot** | 代码 + 验收文档 |
-
-feat 结束 = DD 经人类确认，随后自然衔接 autopilot。
+Core belief: **Code is ground truth.** Every plan conclusion must be grounded in "actually-read real code / locally-pulled latest repo / read-only-verified real server data". Conclusions based on training data, generic framework assumptions, or guesswork are **prohibited**.
 
 ---
 
-## 阶段 0：前置检查
+## Scope and Boundaries
 
-### 0.1 开发环境（worktree 默认）
+| Phase | Owner | Artifact |
+|-------|-------|----------|
+| Requirement scope analysis → code research → DD plan → plan review → confirmation | **feat (this skill)** | Reviewed and confirmed DD (inside requirement subfolder) |
+| Batch development → code review → fixes → archiving + acceptance | **autopilot** | Code + acceptance documents |
 
-默认走 worktree 隔离开发（用户未指定不必每次问）。例外：明确说直接主分支 / 单文件低风险 / 纯文档。
+feat ends = DD confirmed by a human; autopilot naturally follows.
+
+---
+
+## Phase 0: Pre-flight Checks
+
+### 0.1 Development Environment (worktree default)
+
+Default to worktree-isolated development (no need to ask the user every time unless they haven't specified). Exceptions: explicitly asked for direct main branch / single-file low-risk / pure documentation.
 
 ```bash
 git branch --show-current
 ```
 
-- 在主分支且要正经开发 → 走 `{WORKTREE_SKILL}`（从主分支拉新分支 + 建 worktree + 同步 env）
-- 已在功能 worktree → 记录分支名 + worktree 绝对路径，全程锁定 cwd（禁止 `cd` 漂出）
+- On main branch and doing real development → use `{WORKTREE_SKILL}` (pull new branch from main + create worktree + sync env)
+- Already in a feature worktree → record branch name + worktree absolute path, lock cwd throughout (no `cd` drift)
 
-### 0.2 需求子文件夹定位
+### 0.2 Locate Requirement Subfolder
 
-确定需求编号与子文件夹 `{DOCS_ROOT}/{type}/{ID}/`（新功能 / 优化 / 修复）。
-小功能（≤ {SMALL_FILE_THRESHOLD} 文件纯增量/样式/文案）可跳过 DD 直接进确认门控，但需说明理由。
+Determine requirement ID and subfolder `{DOCS_ROOT}/{type}/{ID}/` (new feature / enhancement / fix).
+Small features (≤ {SMALL_FILE_THRESHOLD} files, pure additive/styling/copy) may skip the DD and go directly to the confirmation gate, but the rationale must be stated.
 
-### 0.3 经验教训关联（若项目有 `{LESSONS}`）
+### 0.3 Lessons Learned Lookup (if project has `{LESSONS}`)
 
-读 `{LESSONS}`，按任务关键词匹配章节并输出关键陷阱摘要（标注项目最高频错误类）。**不阻塞，直接继续。**
-
----
-
-## 阶段 1：需求范围分析
-
-把需求拆成可调研的范围清单，**先界定要查什么，再去查**：
-
-```
-🔍 需求范围分析
-需求：{一句话}
-涉及本仓模块：{页面/组件/hook/store/lib，列具体路径猜测}
-涉及其它仓库：{后端/合约/服务 — 哪些路由/方法/事件}
-涉及服务器/运行时数据：{是否需核验 DB/部署配置/线上状态/日志}
-涉及第三方库：{是否引入/依赖某库的某能力}
-风险等级：{小 / 中 / 大}（决定阶段 4 拉几个 review 代理）
-未知点：{需要调研才能确定的关键问题，逐条列}
-```
-
-风险等级判定（驱动后续 review 规模）：
-
-| 等级 | 信号 |
-|------|------|
-| 小 | ≤{SMALL_FILE_THRESHOLD} 文件、纯增量/样式/文案、单模块、无跨仓库 |
-| 中 | 单模块功能、3-5 文件、有业务逻辑、依赖已有接口 |
-| 大 | 新页面/跨模块/架构决策/新全局状态/资金·认证·支付/跨仓库契约/新依赖选型 |
+Read `{LESSONS}`, match sections to the task's key terms and output a summary of key pitfalls (highlight the most frequent error types in the project). **Non-blocking — continue immediately.**
 
 ---
 
-## 阶段 2：代码库真实调研（铁律）
+## Phase 1: Requirement Scope Analysis
 
-**未做本阶段直接出方案 = 违规。** 凡涉及其它仓库（后端/合约/服务），必须先拉最新本地仓库 + 读真实代码。
+Break the requirement into a researchable scope list. **Define what to investigate before investigating**:
 
-### 2.1 拉取最新代码（分支铁律）
+```
+🔍 Requirement Scope Analysis
+Requirement: {one sentence}
+Modules in this repo: {pages/components/hooks/store/lib — list specific path guesses}
+Other repositories: {backend/contracts/services — which routes/methods/events}
+Server/runtime data: {does the plan require verifying DB/deploy config/production state/logs}
+Third-party libraries: {is a library being introduced or relied upon for a specific capability}
+Risk level: {small / medium / large} (determines number of review agents in Phase 4)
+Unknowns: {key questions that require research to answer, listed one by one}
+```
 
-各仓库的**开发分支可能不同**（如后端在 `dev` 迭代、前端/合约在 `main`），按 `SETUP.md` 的 `{REPO_MAP}` 切到正确分支再拉：
+Risk level determination (drives review scale):
+
+| Level | Signals |
+|-------|---------|
+| Small | ≤{SMALL_FILE_THRESHOLD} files, pure additive/styling/copy, single module, no cross-repo |
+| Medium | Single-module feature, 3–5 files, has business logic, depends on existing interfaces |
+| Large | New page / cross-module / architectural decision / new global state / funds·auth·payment / cross-repo contract / new dependency selection |
+
+---
+
+## Phase 2: Real Codebase Research (Non-Negotiable)
+
+**Skipping this phase and writing the plan directly is a violation.** Whenever another repository is involved (backend/contracts/services), pull the latest local repo and read the real code first.
+
+### 2.1 Pull Latest Code (Branch Protocol)
+
+**Each repository may have a different development branch** (e.g., backend iterates on `dev`, frontend/contracts on `main`). Check `{REPO_MAP}` in SETUP.md for the correct branch to check out before pulling:
 
 ```bash
-# 模板（实际仓库/分支以 {REPO_MAP} 为准）
+# Template (actual repos/branches defined in {REPO_MAP})
 git -C {REPO_PATH} checkout {DEV_BRANCH} && git -C {REPO_PATH} pull --ff-only
 ```
 
-> `pull --ff-only` 失败（本地有差异）→ **不要 reset/merge**，告诉用户去那个仓库自己处理。
-> 用 `git -C <path>` 跨仓库，**不污染当前 worktree cwd**。
+> If `pull --ff-only` fails (local has diverged) → **do not reset/merge**; tell the user to handle it in that repo themselves.
+> Use `git -C <path>` for cross-repo operations — **do not pollute the current worktree cwd**.
 
-### 2.2 读真实代码（本地优先，禁假设）
+### 2.2 Read Real Code (Local First, No Assumptions)
 
-| 目标 | 第一入口 |
-|------|---------|
-| 跨服务对外能力 | 该仓库的 API 全景文档（方法/事件/错误/参数）→ 再读源码 |
-| 接口契约 | 进对应服务读 handler / DTO / model（看字段校验是否 required）+ 数据迁移 |
-| 本仓现状 | grep 真实调用点 / 类型定义 / hook / store，确认现有实现而非脑补 |
+| Target | Primary entry point |
+|--------|---------------------|
+| Cross-service external capabilities | That repo's API overview doc (methods/events/errors/params) → then read source |
+| Interface contracts | Go to the service and read handler / DTO / model (check whether fields are required) + data migrations |
+| Current state of this repo | grep real call sites / type definitions / hooks / store — confirm existing implementation, do not guess |
 
-红线：
-- ❌ 凭训练数据 / 通用框架假设本项目自有代码（自有代码不在训练集）
-- ❌ 用远程网页抓取替代本地直读（本地更快、能 grep、能拿未推远端的本地分支）
-- ✅ 文档与源码冲突 / 文档标 TBD / 纯产品决策 → 读完后才可问用户
+Red lines:
+- ❌ Assume this project's own code behavior from training data / generic framework knowledge (project-specific code is not in the training set)
+- ❌ Use remote web scraping as a substitute for reading code locally (local is faster, greppable, and captures unpushed local branches)
+- ✅ If docs conflict with source / docs are marked TBD / pure product decisions → only ask the user after reading both sides
 
-### 2.3 服务器只读核验（需要运行时真相时）
+### 2.3 Read-Only Server Verification (when runtime truth is needed)
 
-当方案依赖**运行时真实状态**（DB 行、线上部署配置、实际接口响应、日志）而代码读不出时，可 SSH **只读**核验。服务器统一登记在 `{SSH_INVENTORY}`，**一律走别名，禁止 `-i 绝对路径`**：
+When the plan depends on **real runtime state** (DB rows, live deploy config, actual API responses, logs) that cannot be determined from code, SSH read-only verification is permitted. All servers are registered in `{SSH_INVENTORY}`. **Always use aliases — `-i <absolute-path>` is prohibited**:
 
 ```bash
-ssh {SERVER_ALIAS}     # 别名 + 用途以 {SSH_INVENTORY} 为准
+ssh {SERVER_ALIAS}     # alias + purpose defined in {SSH_INVENTORY}
 ```
 
-只读核验示例：查某表字段、看部署 config、curl 内网接口看真实响应、tail 日志看真实报错。
+Read-only verification examples: inspect a table's fields, check deploy config, curl an internal endpoint for the real response, tail logs for real errors.
 
-红线：
-- ⛔ **只读**——禁止在服务器写库 / 改配置 / 重启服务 / 部署。要写要部署 → 停手交用户
-- ⛔ 私钥内容 / 凭据 / passphrase 绝不打印到输出
-- ⛔ 不确定某操作是否只读 → 先问用户
+Red lines:
+- ⛔ **Read-only only** — prohibited: write to DB / change config / restart services / deploy. Anything involving writes → stop and hand to user
+- ⛔ Private key content / credentials / passphrases must never be printed to output
+- ⛔ Uncertain whether an operation is read-only → ask the user first
 
-### 2.4 第三方库 / 接口能力验证
+### 2.4 Third-Party Library / Interface Capability Verification
 
-- 声称某库"支持/不支持"某能力 → 先查官方文档（如 context7）或读 `node_modules` 源码，禁训练数据推断
-- 新引入依赖 → 先输出 top-N 横向对比表（star/下载/last commit/官方 demo），用户确认才装
-- 接口路径/归属存疑 → `curl` 实测真实路径 + HTTP 码，DD 里贴结果
-
----
-
-## 阶段 3：协同整理方案（写 DD）
-
-整理成 DD，落需求子文件夹 `{DOCS_ROOT}/{type}/{ID}/{DD|ENH|BUG}.md`（主文件名随 `{type}` 取）+ `INDEX.md`。必含：
-
-- **§1 背景与范围**：解决什么、涉及哪些文件/仓库/服务器
-- **§2 Research**：本阶段调研的**证据**——读了哪些真实代码（带路径行号）、拉到的分支 commit、服务器核验结果、curl HTTP 码、库能力验证
-- **§2.5 设计稿节点映射**（UI 任务必填，见 `{DESIGN_IMPL_SKILL}`）：节点 ID ↔ 文件路径表
-- **§3 方案设计**：组件/数据流/关键决策（含备选方案 + 弃选理由）；多个可行方案有真实 trade-off 且难逆转 → 提取 ADR
-- **§4 实施计划**：拆成 Batch（每 ≤{MAX_FILES_PER_BATCH} 文件），供 autopilot 直接执行
-- **§5 决策矩阵**：问题/方案矩阵含 `[级别 / 触发场景 / 影响范围 / ROI]` 4 栏
-
-> 存在多个可行方案且影响超单文件 → **显式列出让人类选**，不默默挑一种。
+- Claiming a library "supports/does not support" a capability → check official docs (e.g., context7) or read `node_modules` source first; training data inference is prohibited
+- Introducing a new dependency → first output a top-N comparison table (stars/downloads/last commit/official demo) for user confirmation before installing
+- Uncertain about an API path/ownership → `curl` to test the real path + HTTP status code; include the result in the DD
 
 ---
 
-## 阶段 4：按需求等级拉 1-3 代理审方案（plan review）
+## Phase 3: Collaborative Plan Authoring (Write the DD)
 
-**方案整理好后、确认门控前**，按阶段 1 风险等级拉独立 subagent 审**方案本身**（不是代码）。写方案的上下文不能自审。
+Organize into a DD document, placed in the requirement subfolder `{DOCS_ROOT}/{type}/{ID}/{DD|ENH|BUG}.md` (main filename follows `{type}`) + `INDEX.md`. Must include:
 
-| 等级 | 代理数 | 组合（审方案视角） |
-|------|-------|------------------|
-| 小 | **0** | 跳过 plan review，直接确认门控 |
-| 中 | **1** | `critic`（方案漏洞/边界/可行性）或 `design-distiller`（磨平 DD 软边界） |
-| 大 | **2-3** | `critic` + `architect`（架构/可逆性/跨模块影响）+ 按域第三个：`security-reviewer`（资金/认证）或 `document-specialist`（SDK/契约正确性）|
+- **§1 Background and Scope**: what problem is being solved, which files/repos/servers are involved
+- **§2 Research**: **evidence** from this phase — which real code was read (with path + line numbers), branch commit that was pulled, server verification results, curl HTTP codes, library capability verification
+- **§2.5 Design Node Mapping** (required for UI tasks, see `{DESIGN_IMPL_SKILL}`): node ID ↔ file path table
+- **§3 Plan Design**: components/data flow/key decisions (including alternatives considered + rationale for rejection); multiple viable options with real trade-offs and hard-to-reverse consequences → extract as an ADR
+- **§4 Implementation Plan**: broken into Batches (each ≤{MAX_FILES_PER_BATCH} files), ready for autopilot to execute directly
+- **§5 Decision Matrix**: problem/solution matrix with `[severity / trigger scenario / impact scope / ROI]` 4-column format
 
-并行委派（一条消息多个 Agent 调用），每个 agent prompt **必须显式注入**（subagent 不继承上下文）：
-
-1. DD 绝对路径 + 需求范围摘要 + 调研证据要点
-2. 项目关键约定 + 相关规则（跨仓库/安全/设计等按需）
-3. 审查重点：**方案是否落在真实代码上**（有无凭假设）、是否漏覆盖边界/异常、是否有更优/更可逆方案、Batch 拆分是否合理、跨仓库契约是否核对过真实字段
-4. 输出落需求子文件夹绝对路径 `reviews/REV-plan-v1-{A|B|C}-{agent}.md`（与 autopilot 的 `REV-code-v1-*` 命名正交，同目录不撞名；二次审查新建 `v2` 不覆盖 v1），最终消息只回结论摘要 + 报告路径（不贴全文，防上下文截断丢报告）
+> If multiple viable options exist and impact spans more than a single file → **list them explicitly for the human to choose**; do not silently pick one.
 
 ---
 
-## 阶段 5：主流程处理审查意见 → 打磨 DD → 确认门控
+## Phase 4: 1–3 Review Agents Based on Risk Level (Plan Review)
 
-### 5.1 处理意见
+**After the plan is drafted, before the confirmation gate**, spawn independent subagents to review **the plan itself** (not the code), based on the risk level from Phase 1. The plan-writing context cannot self-review.
 
-主流程读各审查报告，合并去重，自动处理：
-- **采纳**：方案硬伤/漏洞/更优方案 → 直接改 DD（补调研、改设计、调 Batch 拆分）
-- **存疑**：审查建议本身可疑/不清 → 先核验（读代码/问）再决定，不盲从
-- **延后**：低 ROI 的方案级优化 → DD 里记一笔，不阻塞
+| Level | Agent count | Composition (plan review perspective) |
+|-------|------------|--------------------------------------|
+| Small | **0** | Skip plan review, go directly to confirmation gate |
+| Medium | **1** | `critic` (plan flaws/edge cases/feasibility) or `design-distiller` (sharpen soft plan boundaries) |
+| Large | **2–3** | `critic` + `architect` (architecture/reversibility/cross-module impact) + domain third: `security-reviewer` (funds/auth) or `document-specialist` (SDK/contract correctness) |
 
-DD 底部回写「方案 review 处理记录」。
+Delegate in parallel (multiple Agent calls in one message). Each agent prompt **must explicitly inject** (subagents do not inherit context):
 
-### 5.2 确认门控 ⛔
+1. DD absolute path + requirement scope summary + key research evidence points
+2. Project key conventions + relevant rules (cross-repo/security/design as applicable)
+3. Review focus: **is the plan grounded in real code** (any assumptions?), are edge cases/exceptions covered, are there better/more reversible options, is the batch breakdown sensible, were cross-repo contracts verified against real fields
+4. Output to the requirement subfolder absolute path `reviews/REV-plan-v1-{A|B|C}-{agent}.md` (orthogonal naming to autopilot's `REV-code-v1-*` — same directory, no name collision; second review pass creates `v2`, does not overwrite v1); final message only reports conclusion summary + report path (no full text — prevents context truncation from swallowing the report)
+
+---
+
+## Phase 5: Main Flow Handles Review Findings → Refine DD → Confirmation Gate
+
+### 5.1 Process Findings
+
+Main flow reads all review reports, deduplicates, and auto-handles:
+- **Accept**: plan hard defects/gaps/better alternatives → update the DD directly (add research, revise design, adjust batch breakdown)
+- **Dispute**: if the review suggestion itself is questionable/unclear → verify first (read code/ask) before deciding; do not blindly follow
+- **Defer**: low-ROI plan-level optimizations → note in the DD, do not block
+
+Append a "Plan Review Resolution Record" to the bottom of the DD.
+
+### 5.2 Confirmation Gate ⛔
 
 ```
-⏸️  方案确认门控
+⏸️  Plan Confirmation Gate
 DD: {DOCS_ROOT}/{type}/{ID}/{DD|ENH|BUG}.md
-调研证据: {N} 处真实代码 / 拉取分支 / 服务器核验 / curl
-方案 review: {K} 代理（{结论}）→ 已处理
-实施计划: {M} 个 Batch
+Research evidence: {N} real code references / pulled branches / server verifications / curls
+Plan review: {K} agents ({verdict}) → resolved
+Implementation plan: {M} Batches
 
-以上方案需你确认后才能开始编码。回复 "确认"/"OK"/"开始" 进入 autopilot，或提修改意见。
-⛔ 收到确认前禁止编写任何业务代码。
+This plan requires your confirmation before coding begins. Reply "confirm"/"OK"/"start" to proceed to autopilot, or provide revision feedback.
+⛔ Writing any business code before receiving confirmation is prohibited.
 ```
 
-- 明确肯定 → 进入阶段 6；提修改意见 → 回阶段 3/5 调整重门控；模糊/沉默 → 再次请求明确确认
+- Explicit confirmation → proceed to Phase 6; revision feedback → return to Phase 3/5 to adjust and re-gate; ambiguous/silent → request explicit confirmation again
 
 ---
 
-## 阶段 6：交接 autopilot
+## Phase 6: Hand Off to Autopilot
 
-确认后衔接 `autopilot`（DD 已在需求子文件夹，含 §4 实施计划）：批次开发（每 batch 合适测试）→ 1-3 代理代码 review → 处理意见 → 归档验收。
-
----
-
-## 异常处理
-
-| 场景 | 处理 |
-|------|------|
-| 用户"快速修复 XX" | ≤{SMALL_FILE_THRESHOLD} 文件低风险 → 简化（跳 DD + 跳 plan review），否则走完整流程 |
-| 其它仓库 `pull --ff-only` 失败 | 不 reset/merge，告诉用户去那个仓库处理 |
-| 阶段 2 调研结论与需求前提矛盾（接口不存在/架构冲突/技术不可行） | **停止写 DD**，带真实代码证据呈报用户，等需求调整（代码为铁律——铁律也可否决需求） |
-| 需写服务器/部署 | 停手，只读边界外的操作交用户 |
-| 文档与代码冲突 | 读完两边后才问用户哪个权威 |
-| 方案 review 判定需重做 | 暂停，呈报审查结论，建议重新设计 |
-| 用户中途改需求 | 回阶段 1 重新分析范围 |
+After confirmation, hand off to `autopilot` (DD is in the requirement subfolder with §4 implementation plan): batch development (with appropriate tests per batch) → 1–3 code review agents → handle findings → archive acceptance.
 
 ---
 
-## 安全红线
+## Exception Handling
 
-1. **代码为铁律** — 涉及其它仓库/服务器的结论必须有真实代码/数据支撑，禁训练数据假设
-2. **拉最新再调研** — 按 `{REPO_MAP}` 切对分支，未拉直接写方案违规
-3. **服务器只读** — 禁止在服务器写库/改配置/部署/重启；私钥凭据不打印
-4. **方案 review 用独立 subagent** — 禁主对话自审
-5. **确认门控前禁编码** — 收到明确确认才进 autopilot
-6. **多可行方案让人类选** — 影响超单文件且有真实 trade-off 时显式列出
+| Scenario | Action |
+|----------|--------|
+| User says "quick fix XX" | ≤{SMALL_FILE_THRESHOLD} files low-risk → simplify (skip DD + skip plan review); otherwise run full flow |
+| Other repo `pull --ff-only` fails | Do not reset/merge; tell the user to handle it in that repo |
+| Phase 2 research contradicts requirement premise (interface doesn't exist / architecture conflict / technically infeasible) | **Stop writing the DD** — report to user with real code evidence and wait for requirement adjustment (code is ground truth — ground truth can also veto requirements) |
+| Need to write to server/deploy | Stop; operations outside the read-only boundary are handed to the user |
+| Docs conflict with code | Read both sides before asking the user which is authoritative |
+| Plan review determines a redo is needed | Pause, report review conclusions, suggest redesign |
+| User changes requirements mid-flow | Return to Phase 1 to re-analyze scope |
 
 ---
 
-> 迁移到新项目：见同目录 `SETUP.md`。
+## Safety Red Lines
+
+1. **Code is ground truth** — conclusions involving other repos/servers must be backed by real code/data; training data assumptions are prohibited
+2. **Pull latest before researching** — check out the correct branch per `{REPO_MAP}`; writing a plan without pulling is a violation
+3. **Server is read-only** — prohibited: write to DB / change config / deploy / restart; private key credentials must not be printed
+4. **Plan review uses independent subagents** — main conversation self-review is prohibited
+5. **No coding before confirmation gate** — only enter autopilot after receiving explicit confirmation
+6. **Let humans choose among multiple viable options** — when impact spans more than a single file and there are real trade-offs, list options explicitly
+
+---
+
+> To migrate to a new project: see `SETUP.md` in the same directory.

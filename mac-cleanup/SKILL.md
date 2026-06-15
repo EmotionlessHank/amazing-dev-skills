@@ -1,183 +1,183 @@
 ---
 name: mac-cleanup
-description: macOS 系统清理审计。当用户说 "/mac-cleanup"、"清理电脑"、"系统清理"、"磁盘清理"、"清理软件" 时触发。自动扫描 Applications、Homebrew、npm、pip、系统缓存等，输出结构化清理建议报告，等用户确认后执行删除操作。
+description: macOS system cleanup audit. Triggers when the user says "/mac-cleanup", "clean up my mac", "system cleanup", "disk cleanup", or "clean up apps". Automatically scans Applications, Homebrew, npm, pip, system caches, and outputs a structured cleanup recommendation report. Waits for user confirmation before executing any deletions.
 version: 1.0.0
 ---
 
-# /mac-cleanup — macOS 系统清理审计
+# /mac-cleanup — macOS System Cleanup Audit
 
-自动扫描本机已安装应用、包管理器、系统缓存，输出结构化清理建议，用户确认后执行清理。
+Automatically scans installed applications, package managers, and system caches, outputs structured cleanup recommendations, and executes cleanup only after user confirmation.
 
 ---
 
-## 触发条件
+## Trigger Conditions
 
-用户说出以下任意关键词：
+Activate on any of the following keywords:
 - `/mac-cleanup`
-- `清理电脑`、`系统清理`、`磁盘清理`、`清理软件`
-- `mac cleanup`、`disk cleanup`
+- `clean up my mac`, `system cleanup`, `disk cleanup`, `clean up apps`
+- `mac cleanup`, `disk cleanup`
 
 ---
 
-## 执行步骤
+## Execution Steps
 
-### Step 1：扫描已安装应用（/Applications）
+### Step 1: Scan Installed Applications (/Applications)
 
-查找超过 1 个月未打开的应用，以及占用空间较大的应用：
+Find applications not opened in over a month and applications consuming significant disk space:
 
 ```bash
-# 获取所有 app 的名称、最后使用日期、物理大小
+# Get app name, last used date, and physical size for all apps
 find /Applications -maxdepth 2 -name "*.app" -exec mdls -name kMDItemLastUsedDate -name kMDItemDisplayName -name kMDItemPhysicalSize {} \; 2>/dev/null | paste - - - | sort
 
-# 获取所有 app 按磁盘占用排序
+# List all apps sorted by disk usage
 find /Applications -maxdepth 2 -name "*.app" -exec du -sm {} + 2>/dev/null | sort -rn
 ```
 
-分析维度：
-- **超过 1 个月未打开**的应用（根据 kMDItemLastUsedDate 判断）
-- **从未记录使用时间**的应用（kMDItemLastUsedDate 为 null）
-- **占用空间大但使用频率低**的应用
+Analysis dimensions:
+- **Not opened in over a month** (based on kMDItemLastUsedDate)
+- **No recorded usage time** (kMDItemLastUsedDate is null)
+- **Large footprint but low usage frequency**
 
-### Step 2：扫描 Homebrew
+### Step 2: Scan Homebrew
 
 ```bash
-# 已安装 formula 和 cask
+# Installed formulae and casks
 brew list --formula
 brew list --cask
 
-# 孤立依赖检查
+# Check for orphaned dependencies
 brew autoremove --dry-run
 
-# 旧版本和缓存
+# Old versions and cache
 brew cleanup --dry-run
 
-# 缓存大小
+# Cache size
 du -sh $(brew --cache)
 
-# 最大的 formula 安装
+# Largest formula installations
 du -sh /opt/homebrew/Cellar/* 2>/dev/null | sort -rh | head -15
 ```
 
-### Step 3：扫描 npm
+### Step 3: Scan npm
 
 ```bash
-# 全局包
+# Global packages
 npm list -g --depth=0
 
-# 全局包占用空间
+# Global packages disk usage
 du -sh $(npm root -g)
 
-# npm 缓存大小
+# npm cache size
 du -sh ~/.npm
 ```
 
-### Step 4：扫描 pip
+### Step 4: Scan pip
 
 ```bash
-# 已安装包
+# Installed packages
 python3 -m pip list
 
-# pip 缓存大小
+# pip cache size
 du -sh ~/Library/Caches/pip
 ```
 
-### Step 5：扫描系统缓存和其他
+### Step 5: Scan System Caches and Miscellaneous
 
 ```bash
-# ~/Library/Caches 各目录占用（Top 15）
+# Top 15 directories in ~/Library/Caches by size
 du -sh ~/Library/Caches/* 2>/dev/null | sort -rh | head -15
 
-# ~/.cache 大小
+# ~/.cache size
 du -sh ~/.cache
 
-# Xcode DerivedData 和 Archives
+# Xcode DerivedData and Archives
 du -sh ~/Library/Developer/Xcode/DerivedData ~/Library/Developer/Xcode/Archives 2>/dev/null
 
-# Docker（如果已安装）
-which docker &>/dev/null && docker system df 2>/dev/null || echo "Docker 未安装"
+# Docker (if installed)
+which docker &>/dev/null && docker system df 2>/dev/null || echo "Docker not installed"
 
 # pnpm store
 pnpm store status 2>/dev/null; du -sh ~/Library/Caches/pnpm 2>/dev/null
 
-# yarn 全局包
+# yarn global packages
 which yarn &>/dev/null && yarn global list 2>/dev/null
 ```
 
-### Step 6：输出清理报告
+### Step 6: Output Cleanup Report
 
-将以上数据整理为结构化中文报告，格式如下：
+Compile the above data into a structured report using the following format:
 
 ---
 
-#### 报告模板
+#### Report Template
 
 ```
-# macOS 系统清理报告（{日期}）
+# macOS System Cleanup Report ({date})
 
-## 1. 应用程序（/Applications）
+## 1. Applications (/Applications)
 
-### 超过 1 个月未打开
-| 应用 | 上次使用 | 占用空间 | 建议 |
-|------|----------|----------|------|
+### Not opened in over a month
+| App | Last Used | Disk Usage | Recommendation |
+|-----|-----------|------------|----------------|
 
-### 从未记录使用时间
-| 应用 | 占用空间 | 建议 |
-|------|----------|------|
+### No recorded usage time
+| App | Disk Usage | Recommendation |
+|-----|------------|----------------|
 
-### 其他值得关注
-| 应用 | 上次使用 | 占用空间 | 理由 |
-|------|----------|----------|------|
+### Other notable items
+| App | Last Used | Disk Usage | Notes |
+|-----|-----------|------------|-------|
 
 ## 2. Homebrew
-| 项目 | 可回收空间 | 清理命令 |
-|------|-----------|---------|
+| Item | Reclaimable Space | Cleanup Command |
+|------|-------------------|-----------------|
 
-### 值得关注的大包
-| 包 | 大小 | 建议 |
-|---|------|------|
+### Large packages worth noting
+| Package | Size | Recommendation |
+|---------|------|----------------|
 
 ## 3. npm
-| 项目 | 大小 | 说明 |
-|------|------|------|
+| Item | Size | Notes |
+|------|------|-------|
 
 ## 4. pip
-| 包 | 说明 |
-|---|------|
+| Package | Notes |
+|---------|-------|
 
-## 5. 系统缓存（~/Library/Caches）
-| 缓存目录 | 大小 | 建议 |
-|----------|------|------|
+## 5. System Caches (~/Library/Caches)
+| Cache Directory | Size | Recommendation |
+|-----------------|------|----------------|
 
-## 6. 其他（Xcode / Docker / pnpm 等）
-| 项目 | 大小 | 清理命令 |
-|------|------|---------|
+## 6. Miscellaneous (Xcode / Docker / pnpm / etc.)
+| Item | Size | Cleanup Command |
+|------|------|-----------------|
 
-## 汇总
-| 类别 | 预估可回收 | 风险等级 |
-|------|-----------|---------|
+## Summary
+| Category | Estimated Reclaimable | Risk Level |
+|----------|-----------------------|------------|
 
-### 一键安全清理命令（低风险项）
-（列出所有无风险的清理命令）
+### One-click safe cleanup commands (low-risk items)
+(List all zero-risk cleanup commands here)
 ```
 
 ---
 
-### Step 7：等待用户确认
+### Step 7: Wait for User Confirmation
 
-输出报告后，**不要自动执行任何清理操作**。等待用户回复指定需要清理的项目，然后逐一执行。
+After outputting the report, **do not automatically execute any cleanup operations**. Wait for the user to specify which items to clean, then execute them one by one.
 
-执行删除时注意：
-- `/Applications` 下的 app：先尝试 `rm -rf`，如遇权限问题（Mac App Store 安装的应用），提示用户手动在 Launchpad 长按删除
-- Homebrew 包：使用 `brew uninstall <package>` 或 `brew cleanup`
-- npm 全局包：使用 `npm uninstall -g <package>`
-- 缓存目录：使用 `rm -rf <path>`
-- pip 包：使用 `pip3 uninstall <package>`
+When performing deletions:
+- Apps under `/Applications`: try `rm -rf` first; if permission is denied (Mac App Store apps), prompt the user to manually long-press in Launchpad to delete
+- Homebrew packages: use `brew uninstall <package>` or `brew cleanup`
+- npm global packages: use `npm uninstall -g <package>`
+- Cache directories: use `rm -rf <path>`
+- pip packages: use `pip3 uninstall <package>`
 
 ---
 
-## 注意事项
+## Notes
 
-- 所有扫描步骤尽量**并行执行**以提高效率
-- 报告中标注每项清理的**风险等级**（无风险 / 低风险 / 需确认）
-- **绝不自动执行删除**，必须等用户明确指示
-- 对于无法判断用途的应用或包，标记为"需确认"而非建议删除
+- Run all scan steps **in parallel** where possible to improve efficiency
+- Mark the **risk level** of each cleanup item in the report (safe / low-risk / requires confirmation)
+- **Never auto-execute deletions** — always wait for explicit user instruction
+- For applications or packages whose purpose cannot be determined, mark as "requires confirmation" rather than recommending deletion

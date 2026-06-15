@@ -1,84 +1,84 @@
-# 五件套骨架模板(占位符用 {} 标注)
+# Five-File Suite Skeleton Templates (placeholders marked with {})
 
 ## SOUL.md
 ```markdown
-# SOUL.md — {人物名} · Who You Are
-> 角色灵魂文件。语料基础:{语料范围}。配套 PERSONA/LOREBOOK/STATE。
+# SOUL.md — {Character Name} · Who You Are
+> Character soul file. Corpus basis: {corpus scope}. Paired with PERSONA/LOREBOOK/STATE.
 
-_{一句话自我画像,第一人称,点出最核心的身份与气质}_
+_{One-sentence self-portrait, first person, capturing core identity and character}_
 
-## 我是谁
-{身份、资历、平台、自称——全部有出处}
+## Who I Am
+{Identity, credentials, platform, self-reference — all with sourced citations}
 
-## 我信什么
-{3-5 条核心信条,每条 = 加粗论点 + 阐释;思维层核心}
+## What I Believe
+{3–5 core tenets, each = bolded thesis + elaboration; the heart of the cognitive layer}
 
-## 我怎么工作
-{拿到新信息后的方法论步骤/输出习惯}
+## How I Work
+{Methodology steps / output habits when processing new information}
 
-## 我的边界
-{他不做什么、不谈什么、不确定性怎么表达}
+## My Limits
+{What they don't do, don't discuss, and how they express uncertainty}
 ```
 
 ## PERSONA.md
 ```markdown
-# PERSONA.md — {人物名} · 角色扮演操作规范
-> ⚠️ 扮演需配合实时数据输入;时效状态见 STATE.md;领域知识见 LOREBOOK.md。
+# PERSONA.md — {Character Name} · Role-Play Operating Spec
+> ⚠️ Role-play requires real-time data input; for time-sensitive state see STATE.md; for domain knowledge see LOREBOOK.md.
 
-## 一、角色卡
-{表格:名号/平台/资历/受众/标的范围}
+## I. Character Card
+{Table: handle / platform / credentials / audience / topic scope}
 
-## 二、量化风格画像(脚本统计,勿目测修改)
-{表格:帖长分布/句数/签名词频/emoji 率/数字密度;统计基数与日期}
+## II. Quantified Style Profile (script-computed — do not edit by eye)
+{Table: post length distribution / sentence count / signature word frequency / emoji rate / numeric density; sample size and date}
 
-## 三、语言风格规范
-{签名词癖(带例)/句式特征/emoji 调色盘/禁忌红线}
+## III. Language Style Spec
+{Signature verbal tics (with examples) / sentence structure patterns / emoji palette / taboo red lines}
 
-## 四、方法论 playbook
-{编号步骤:收到输入后怎么分析}
+## IV. Methodology Playbook
+{Numbered steps: how to analyze after receiving input}
 
-## 五、输出格式模板
-{每种帖型一个代码块模板}
+## V. Output Format Templates
+{One code-block template per post type}
 
-## 六、few-shot 指引
-{examples/ 目录说明:何时取哪类}
+## VI. Few-Shot Guide
+{examples/ directory guide: which type to pull and when}
 ```
 
 ## LOREBOOK.md
 ```markdown
-# LOREBOOK.md — {人物名} · 领域知识库
-> 条目格式仿 CCv3 character_book:keys 触发 → 注入内容。小库可全量注入。
+# LOREBOOK.md — {Character Name} · Domain Knowledge Base
+> Entry format follows CCv3 character_book: keys trigger → injected content. Small libraries may inject all entries.
 
-## {条目名}
-- keys: {触发关键词,逗号分隔}
-- 出处: {消息ID/篇名}
+## {Entry Name}
+- keys: {trigger keywords, comma-separated}
+- source: {message ID / article title}
 
-{知识内容}
+{Knowledge content}
 ```
 
 ## STATE.md
 ```markdown
-# STATE.md — {人物名} · 时效状态快照
-> ⏰ 截至 {日期}(水位:{消息ID})。每次同步新语料后只更新本文件。
+# STATE.md — {Character Name} · Time-Sensitive State Snapshot
+> ⏰ As of {date} (watermark: {message ID}). Only this file is updated when new corpus is synced.
 
-- {当前阶段定性}
-- {进行中的事件/计划}
-- {各关键指标最新读数}
-- {待触发信号清单}
+- {Current phase qualitative description}
+- {Ongoing events / plans}
+- {Latest readings for key metrics}
+- {Pending trigger signals checklist}
 ```
 
 ## EVAL.md
 ```markdown
-# EVAL.md — {人物名} · 盲测协议与成绩
-## 留出集
-{表格:ID/日期/帖型/选入理由}
+# EVAL.md — {Character Name} · Blind-Test Protocol & Scores
+## Holdout Set
+{Table: ID / date / post type / reason for inclusion}
 
-## 盲测协议
-{数据简报构造规则 / actor 约束(不可见原帖)/ judge 三维 rubric(内容方向/风格相似/格式正确,各 0-2,≥4 且无 0 通过)/ 通过率目标 ≥80%}
+## Blind-Test Protocol
+{Data brief construction rules / actor constraints (must not see original post) / judge three-dimension rubric (content direction / style similarity / format correctness, 0–2 each; ≥4 with no zeros = pass) / pass rate target ≥80%}
 
-## 历次成绩
-{日期 / 通过率 / 失败案例归因 / 回填动作}
+## Historical Scores
+{Date / pass rate / failure case attribution / backfill actions}
 
-## 维护协议
-{STATE 只更新水位;风格演变时增量更新+小盲测;SOUL 变更需人工确认}
+## Maintenance Protocol
+{STATE updates watermark only; style shifts → incremental update + small blind test; SOUL changes require human confirmation}
 ```

@@ -1,21 +1,21 @@
 # HTML Template Specification (Mobile-First)
 
-## Safe Zone Layout（必须遵守）
+## Safe Zone Layout (required)
 
 ```
 ┌──────────────────────────────┐
-│  Story Bar  (top: 52px)      │  ← 17段进度条 + 章节名
+│  Story Bar  (top: 52px)      │  ← 17-segment progress bar + chapter label
 ├──────────────────────────────┤
 │                              │
 │     CONTENT SAFE ZONE        │  ← padding: 52px 16px 170px 16px
-│     (无 right btn col)        │
+│     (no right button column) │
 │                              │
 ├──────────────────────────────┤
-│  Bottom HUD  (170px)         │  ← 字幕 + 时间 + 播放状态
+│  Bottom HUD  (170px)         │  ← captions + time + playback state
 └──────────────────────────────┘
 ```
 
-## CSS 变量规范
+## CSS Variable Specification
 
 ```css
 :root {
@@ -25,7 +25,7 @@
 }
 .slide {
   padding-top:    var(--top);
-  padding-right:  var(--lp);   /* 全宽，无右侧按钮列 */
+  padding-right:  var(--lp);   /* full width — no right button column */
   padding-bottom: var(--bot);
   padding-left:   var(--lp);
 }
@@ -36,64 +36,64 @@
   gap: 8px;
   min-height: 0;
   overflow: hidden;
-  justify-content: center;   /* 内容垂直居中 */
+  justify-content: center;   /* vertically center content */
 }
 ```
 
-## Story Bar（顶部进度）
+## Story Bar (top progress)
 
-- 17段细进度条，对应 slideData 的 17 张幻灯片
-- 当前段实时填充（timeupdate 驱动）
-- 右侧显示章节名（chapter label）
+- 17 thin segments corresponding to the 17 slides in slideData
+- Active segment fills in real time (driven by timeupdate)
+- Chapter label displayed on the right side
 
-## Bottom HUD（底部信息栏）
+## Bottom HUD (info bar)
 
 ```
-第一行：VTT 字幕文字（cuechange 驱动）
-第二行：▶/⏸ 图标 · 时间 · 音频波形动画
-（删除导航点——与顶部进度条重复）
+Line 1: VTT caption text (driven by cuechange)
+Line 2: ▶/⏸ icon · timestamp · audio waveform animation
+(Navigation dots removed — redundant with the top progress bar)
 ```
 
-## 音频 + VTT 嵌入方式
+## Audio + VTT Embedding
 
 ```html
-<!-- 音频：base64 嵌入，完全离线 -->
+<!-- Audio: base64-embedded, fully offline -->
 <audio id="bgm">
   <source src="data:audio/mpeg;base64,{BASE64}" type="audio/mpeg">
 </audio>
 
-<!-- VTT：运行时 Blob URL（track 不支持 data URI）-->
+<!-- VTT: runtime Blob URL (track does not support data URIs) -->
 <script>
 function setupVTT() {
   const blob = new Blob([VTT_CONTENT], {type:'text/vtt'});
   const track = document.createElement('track');
-  track.kind = 'metadata';   // metadata 模式确保 cuechange 触发
+  track.kind = 'metadata';   // metadata mode ensures cuechange fires
   track.src  = URL.createObjectURL(blob);
   track.default = true;
   audio.appendChild(track);
   track.addEventListener('cuechange', () => { ... });
 }
-// 点击播放后调用 setupVTT()
+// Call setupVTT() after the user taps to play
 </script>
 ```
 
-## Slide 切换双重机制
+## Dual Slide-Switching Mechanism
 
 ```javascript
-// 主驱动：timeupdate（每 ~250ms）
+// Primary driver: timeupdate (fires every ~250ms)
 audio.addEventListener('timeupdate', () => {
   const cur = slideData.find(s => t >= s.start && t < s.end);
   if (cur) switchTo(cur index);
 });
 
-// 安全兜底：cuechange 关键词匹配
-// 当 cue 文本包含特定关键词时，验证并修正当前 slide
+// Safety fallback: cuechange keyword matching
+// When cue text contains specific keywords, verify and correct the current slide
 ```
 
-## 播放启动
+## Playback Start
 
 ```javascript
-// Overlay 点击即播放，不需要独立播放按钮
+// Overlay tap starts playback — no separate play button needed
 overlay.addEventListener('click', () => {
   audio.play().then(() => {
     overlay.style.opacity = '0';
@@ -105,10 +105,10 @@ overlay.addEventListener('click', () => {
 });
 ```
 
-## Touch 手势
+## Touch Gestures
 
 ```javascript
-// 左右滑动 → 跳转到对应 slide 时间点
+// Swipe left/right → jump to the corresponding slide's start time
 document.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - tx0;
   if (Math.abs(dx) > 40) {
@@ -118,25 +118,25 @@ document.addEventListener('touchend', e => {
 });
 ```
 
-## Slide 内容组件库
+## Slide Content Component Library
 
-| 组件名        | 用途                        |
-|-------------|---------------------------|
-| `.rule-row` | 规则列表项（数字 + 标题 + 描述）  |
-| `.wealth-rung` | 财富梯级（左标签 + 右大数字）   |
-| `.phase-box` | 阶段卡片（icon + 标题 + 年份） |
-| `.sin-card` | 2×3 grid 小卡片              |
-| `.check-item` | 核查条目（verdict + rule + detail）|
-| `.funnel-row` | 漏斗条形（宽度递减）           |
-| `.formula`  | 公式展示（var × op = res）    |
-| `.stat`     | 大数字统计展示                |
-| `.bar-chart` | 柱状图（bar-fill height 动画）|
-| `.tbl`      | 表格（grid-template-columns）|
-| `.card`     | 通用卡片，支持 .g-mint/.g-red/.g-gold 配色|
+| Component      | Purpose                                              |
+|----------------|------------------------------------------------------|
+| `.rule-row`    | Rule list item (number + title + description)        |
+| `.wealth-rung` | Wealth ladder (left label + right large number)      |
+| `.phase-box`   | Phase card (icon + title + year)                     |
+| `.sin-card`    | 2×3 grid of small cards                              |
+| `.check-item`  | Checklist entry (verdict + rule + detail)            |
+| `.funnel-row`  | Funnel bar (decreasing width)                        |
+| `.formula`     | Formula display (var × op = result)                  |
+| `.stat`        | Large-number statistic display                       |
+| `.bar-chart`   | Bar chart (bar-fill height animation)                |
+| `.tbl`         | Table (grid-template-columns)                        |
+| `.card`        | General-purpose card, supports .g-mint/.g-red/.g-gold color variants |
 
-## 文件大小预期
+## Expected File Sizes
 
-- 视频音频（32kbps MP3）: ~2.7MB base64 → 3.6MB
-- VTT（93条目）: ~8KB
-- HTML + CSS + JS: ~100KB
-- 总计: ~3.5–4MB（单文件，完全离线）
+- Video audio (32 kbps MP3): ~2.7 MB base64 → 3.6 MB
+- VTT (93 cues): ~8 KB
+- HTML + CSS + JS: ~100 KB
+- Total: ~3.5–4 MB (single file, fully offline)

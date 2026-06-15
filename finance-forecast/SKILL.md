@@ -1,41 +1,42 @@
-# /forecast - 现金流预测
+# /forecast - Cash Flow Forecast
 
-## 触发方式
-用户输入 `/forecast` 或 `/forecast <月数>`
+## Trigger
 
-## 执行步骤
+User types `/forecast` or `/forecast <months>`
 
-1. **读取上下文**
-   - 读取所有 `context/` YAML 文件
-   - 重点关注：`assumptions.yaml`（月支出基准、汇率）、`income.yaml`（收入）、`goals.yaml`（待支付目标）、`fixed_expenses.yaml`（固定支出）
+## Execution Steps
 
-2. **构建预测模型**
-   - 默认预测未来 6 个月（用户可指定月数）
-   - 基准月支出 = `assumptions.yaml` 中的 `monthly_spending.total_with_rent`
-   - 月收入 = `income.yaml` 中的收入汇总 + 转入计划
-   - 考虑通胀：按 `inflation` 参数逐月递增
-   - 扣除一次性目标支出（如 PR 费）在预计月份
+1. **Load Context**
+   - Read all YAML files under `context/`
+   - Focus on: `assumptions.yaml` (monthly spending baseline, exchange rates), `income.yaml` (income), `goals.yaml` (upcoming goal payments), `fixed_expenses.yaml` (fixed costs)
 
-3. **计算关键节点**
-   - ANZ 账户余额何时触及 warning_balance？
-   - 海外储备耗尽时间？
-   - 现金流转正/转负时间点？
+2. **Build the Forecast Model**
+   - Default forecast horizon: 6 months (user may specify a different number)
+   - Baseline monthly spending = `total_with_rent` from `assumptions.yaml → monthly_spending`
+   - Monthly income = aggregated income from `income.yaml` plus planned transfer amounts
+   - Apply inflation: compound monthly using the `inflation` parameter
+   - Deduct one-time goal payments (e.g., PR application fees) in their respective projected months
 
-4. **输出预测表**
+3. **Identify Key Milestones**
+   - When does the ANZ balance first hit `warning_balance`?
+   - When do overseas reserves run out?
+   - When does net cash flow turn positive or negative?
+
+4. **Output Forecast Table**
    ```
    ═══════════════════════════════════════════════
-     现金流预测 - 未来 6 个月
+     Cash Flow Forecast - Next 6 Months
    ═══════════════════════════════════════════════
 
-   月份      收入      支出      净流      ANZ余额    海外储备
-   ─────────────────────────────────────────────
-   2026-04   $X,XXX   $X,XXX   +$XXX    $XX,XXX   ¥XXX,XXX
+   Month     Income    Spending  Net Flow  ANZ Balance  Overseas Reserves
+   ─────────────────────────────────────────────────────────────────────
+   2026-04   $X,XXX   $X,XXX   +$XXX    $XX,XXX      ¥XXX,XXX
    2026-05   ...
    ...
 
-   ⚠️ 风险提示：
-   • [如果有风险节点，在此列出]
+   ⚠️ Risk Alerts:
+   • [List any identified risk milestones here]
 
-   💡 建议：
-   • [基于预测给出的行动建议]
+   💡 Recommendations:
+   • [Action items based on the forecast]
    ```

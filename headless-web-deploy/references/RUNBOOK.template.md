@@ -1,48 +1,48 @@
-# RUNBOOK 模板 — 无域名 Web 应用上线
+# RUNBOOK Template — Domain-Free Web App Deployment
 
-> 把 `<尖括号>` 变量替成你的值。命令在本机执行（`ssh <SSH>` 直连服务器）。
-> 变量：`SSH`=ssh 别名、`APP_DIR=~/apps/<app>`、`PORT=<localhost端口>`、`DOMAIN=<ip连字符>.sslip.io`、`SRC=<本地源目录>`、`DATA=~/.local/share/<app>/data`（可选共享数据）。
+> Replace `<angle-bracket>` variables with your actual values. Commands run on your local machine (connecting to the server via `ssh <SSH>`).
+> Variables: `SSH`=ssh alias, `APP_DIR=~/apps/<app>`, `PORT=<localhost port>`, `DOMAIN=<ip-with-hyphens>.sslip.io`, `SRC=<local source dir>`, `DATA=~/.local/share/<app>/data` (optional shared data).
 
-## Phase A — 服务器内（不开端口，可回滚）
+## Phase A — Server-Side Only (ports closed, fully reversible)
 
-### A1 目录 + 逐文件上传（禁 scp -r 整目录）
+### A1 Directory + File-by-File Upload (never scp -r whole directories)
 ```bash
 ssh <SSH> 'mkdir -p ~/apps/<app> ~/.config/systemd/user'
 scp "<SRC>/app.py" "<SRC>/"*.html "<SRC>/"*.py  <SSH>:'~/apps/<app>/'
 ```
 
-### A2 运行时 + 依赖
+### A2 Runtime + Dependencies
 ```bash
-# Python：先补 venv 包（Ubuntu 常缺），再建 venv
+# Python: install venv package first (often missing on Ubuntu), then create venv
 ssh <SSH> 'sudo apt-get install -y python3-venv || sudo apt-get install -y python3.$(python3 -c "import sys;print(sys.version_info.minor)")-venv'
-ssh <SSH> 'cd ~/apps/<app> && python3 -m venv .venv && .venv/bin/pip -q install --upgrade pip <你的依赖>'
-# Node：scp 后 `npm ci --omit=dev`
+ssh <SSH> 'cd ~/apps/<app> && python3 -m venv .venv && .venv/bin/pip -q install --upgrade pip <your dependencies>'
+# Node: after scp, run `npm ci --omit=dev`
 ```
 
-### A3 生成密钥（服务器现生成，不进 git/对话）
+### A3 Generate Secrets (server-side only — never in git/conversation)
 ```bash
 ssh <SSH> 'umask 077; printf "APP_SECRET=%s\nDATA_PATH=%s\n" "$(openssl rand -hex 32)" "$HOME/<DATA>" > ~/apps/<app>/.env; chmod 600 ~/apps/<app>/.env; stat -c %a ~/apps/<app>/.env'
 ```
 
-### A4 systemd user 服务（仅 localhost）
+### A4 systemd User Service (localhost only)
 ```bash
-# 用 references/app.service.template，scp 到 ~/.config/systemd/user/<app>.service 后：
+# Use references/app.service.template, scp it to ~/.config/systemd/user/<app>.service, then:
 ssh <SSH> 'systemctl --user daemon-reload && systemctl --user enable --now <app> && sleep 2 && systemctl --user --no-pager status <app> | head -6'
 ```
 
-### A5 本地验证
+### A5 Local Verification
 ```bash
 ssh <SSH> 'curl -s 127.0.0.1:<PORT>/healthz; echo'
-ssh <SSH> 'curl -s -o /dev/null -w "no-token:%{http_code}\n" 127.0.0.1:<PORT>/<protected>'   # 期望 403
-ssh <SSH> 'T=$(set -a;. ~/apps/<app>/.env;set +a; cd ~/apps/<app> && .venv/bin/python app.py --token); curl -s -o /dev/null -w "token:%{http_code}\n" "127.0.0.1:<PORT>/<protected>?token=$T"'  # 期望 200
+ssh <SSH> 'curl -s -o /dev/null -w "no-token:%{http_code}\n" 127.0.0.1:<PORT>/<protected>'   # expect 403
+ssh <SSH> 'T=$(set -a;. ~/apps/<app>/.env;set +a; cd ~/apps/<app> && .venv/bin/python app.py --token); curl -s -o /dev/null -w "token:%{http_code}\n" "127.0.0.1:<PORT>/<protected>?token=$T"'  # expect 200
 ```
 
-## Phase B — 开端口 + Caddy（碰公网，先跟用户确认）
+## Phase B — Open Ports + Caddy (touches public internet — confirm with user first)
 
-### B0 🔴 用户在云控制台开 80 + 443 TCP（Source=Any IPv4）
-开后验证：`nc -vz <公网IP> 443`（refused=通但无服务，正常；timed out=没开）。
+### B0 🔴 User opens ports 80 + 443 TCP in cloud console (Source=Any IPv4)
+Verify after opening: `nc -vz <public IP> 443` (refused=reachable but no service yet, normal; timed out=still not open).
 
-### B1 装 Caddy（apt 官方源）
+### B1 Install Caddy (official apt source)
 ```bash
 ssh <SSH> 'sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl && \
  curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg && \
@@ -50,7 +50,7 @@ ssh <SSH> 'sudo apt-get install -y debian-keyring debian-archive-keyring apt-tra
  sudo apt-get update && sudo apt-get install -y caddy && caddy version'
 ```
 
-### B2 Caddyfile 反代（见 references/Caddyfile.template）
+### B2 Caddyfile Reverse Proxy (see references/Caddyfile.template)
 ```bash
 ssh <SSH> 'sudo tee /etc/caddy/Caddyfile >/dev/null' <<CADDY
 <DOMAIN> {
@@ -61,23 +61,23 @@ CADDY
 ssh <SSH> 'sudo systemctl reload caddy || sudo systemctl restart caddy'
 ```
 
-### B3 验证证书 + HTTPS
+### B3 Verify Certificate + HTTPS
 ```bash
 sleep 8
 ssh <SSH> 'sudo journalctl -u caddy --no-pager --since "2 min ago" | grep -iE "certificate obtained|error" | tail'
-curl -s -o /dev/null -w "%{http_code} verify=%{ssl_verify_result}\n" https://<DOMAIN>/healthz   # 期望 200 verify=0
+curl -s -o /dev/null -w "%{http_code} verify=%{ssl_verify_result}\n" https://<DOMAIN>/healthz   # expect 200 verify=0
 ```
 
-### B4 生成带 token 链接（服务器侧，不打印 token）
+### B4 Generate Link with Token (server-side — do not print token to conversation)
 ```bash
-ssh <SSH> 'T=$(set -a;. ~/apps/<app>/.env;set +a; cd ~/apps/<app> && .venv/bin/python app.py --token); echo "链接: https://<DOMAIN>/<path>?token=$T"'
-# 该链接通过 IM 私发用户，不落聊天/日志/git
+ssh <SSH> 'T=$(set -a;. ~/apps/<app>/.env;set +a; cd ~/apps/<app> && .venv/bin/python app.py --token); echo "Link: https://<DOMAIN>/<path>?token=$T"'
+# Send this link to the user via IM — never let it appear in chat/logs/git
 ```
 
-## 回滚表
-| 组件 | 回滚 |
+## Rollback Table
+| Component | Rollback |
 |------|------|
 | App | `systemctl --user disable --now <app>; rm ~/.config/systemd/user/<app>.service; systemctl --user daemon-reload` |
-| Caddy | `sudo systemctl disable --now caddy`（或 `apt-get remove -y caddy`）|
-| 端口 | 云控制台删 80/443 规则 |
-| 数据 | 备份 `<DATA>`；应用每次写前留 `.bak` |
+| Caddy | `sudo systemctl disable --now caddy` (or `apt-get remove -y caddy`) |
+| Ports | Delete the 80/443 rules in the cloud console |
+| Data | Back up `<DATA>`; application leaves a `.bak` before each write |

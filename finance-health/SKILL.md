@@ -1,58 +1,59 @@
-# /health - 财务健康检查
+# /health - Financial Health Check
 
-## 触发方式
-用户输入 `/health`
+## Trigger
 
-## 执行步骤
+User types `/health`
 
-1. **读取所有上下文**
-   - 读取 `context/` 下全部 5 个 YAML 文件
+## Execution Steps
 
-2. **核心指标计算**
-   - 月收入 vs 月支出 → 月净现金流
-   - ANZ 账户当前余额 vs 安全线（`assumptions.yaml` 中的 `risk_thresholds`）
-   - 应急储备月数 = 当前余额 / 月均支出
-   - 海外储备跑道 = 海外储备 / 月转入金额
+1. **Load All Context**
+   - Read all 5 YAML files under `context/`
 
-3. **目标检查**
-   - 遍历 `goals.yaml` 中所有 `status: active` 的目标
-   - 检查每个目标的资金是否充足
-   - 检查是否有目标即将到期（deadline 在 30 天内）
+2. **Calculate Core Metrics**
+   - Monthly income vs. monthly spending → net monthly cash flow
+   - ANZ account current balance vs. safety threshold (`risk_thresholds` in `assumptions.yaml`)
+   - Emergency reserve coverage (months) = current balance ÷ average monthly spending
+   - Overseas reserve runway = overseas reserves ÷ monthly transfer amount
 
-4. **风险检查**
-   - 余额是否低于 warning_balance？
-   - 月支出是否有异常增长趋势？
-   - 固定支出是否有遗漏（对比 `fixed_expenses.yaml` 与实际账单）
+3. **Check Goals**
+   - Iterate over all goals with `status: active` in `goals.yaml`
+   - Verify each goal has sufficient funding
+   - Flag any goal whose deadline falls within the next 30 days
 
-5. **输出健康报告卡**
-   用以下格式输出：
+4. **Check Risks**
+   - Is the balance below `warning_balance`?
+   - Is there an upward trend in monthly spending?
+   - Are any fixed expenses missing (compare `fixed_expenses.yaml` against actual statements)?
+
+5. **Output Health Report Card**
+   Print in the following format:
 
    ```
    ═══════════════════════════════════
-     家庭财务健康报告 - YYYY-MM-DD
+     Household Financial Health Report - YYYY-MM-DD
    ═══════════════════════════════════
 
-   综合评分：XX/100  [健康/注意/警告]
+   Overall Score: XX/100  [Healthy / Caution / Warning]
 
-   ┌─ 现金流 ─────────────────────────
-   │ 月收入：$X,XXX
-   │ 月支出：$X,XXX
-   │ 月结余：$X,XXX (±XX%)
+   ┌─ Cash Flow ──────────────────────
+   │ Monthly Income:   $X,XXX
+   │ Monthly Spending: $X,XXX
+   │ Monthly Surplus:  $X,XXX (±XX%)
    └──────────────────────────────────
 
-   ┌─ 安全储备 ───────────────────────
-   │ ANZ 余额：$XX,XXX [安全/警告]
-   │ 应急覆盖：X.X 个月
-   │ 海外跑道：XX 个月
+   ┌─ Safety Reserves ────────────────
+   │ ANZ Balance:          $XX,XXX [Safe / Warning]
+   │ Emergency Coverage:   X.X months
+   │ Overseas Runway:      XX months
    └──────────────────────────────────
 
-   ┌─ 目标进度 ───────────────────────
-   │ [状态] 目标名称 - 进度说明
+   ┌─ Goal Progress ──────────────────
+   │ [Status] Goal Name - Progress detail
    │ ...
    └──────────────────────────────────
 
-   ┌─ 改进建议 ───────────────────────
-   │ 1. 建议内容（预计影响：$XXX/月）
+   ┌─ Recommendations ────────────────
+   │ 1. Recommendation (estimated impact: $XXX/month)
    │ 2. ...
    └──────────────────────────────────
    ```

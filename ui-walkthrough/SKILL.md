@@ -1,133 +1,133 @@
 ---
 name: ui-walkthrough
-description: UI 走查修复流程。当用户说 "/ui-walkthrough"、"UI 走查"、"走查修复"、"设计走查"、"UI 对齐" 时触发。接收设计师截图+修复点描述或 Figma 链接，整理修改清单，等用户确认后逐项修复。
+description: UI walkthrough and fix workflow. Triggers on "/ui-walkthrough", "UI walkthrough", "walkthrough fix", "design review", or "UI alignment". Accepts designer screenshots with annotated fix points or Figma links, organizes a fix checklist, waits for user confirmation, then applies fixes item by item.
 version: 1.0.0
 ---
 
-# /ui-walkthrough — UI 走查修复流程
+# /ui-walkthrough — UI Walkthrough Fix Workflow
 
-将 UI 走查从"看截图猜改动"提升为"分析→清单→确认→修复"的结构化流程。核心原则：**先整理清单，用户确认后再改代码**。
-
----
-
-## 触发条件
-
-- 用户发送设计师标注的截图 + 修复点描述
-- 用户发送 Figma 链接 + 指定走查区域
-- 用户说"UI 走查"、"走查修复"、"设计走查"
+Elevates UI walkthrough from "eyeballing screenshots and guessing what to change" to a structured **analyze → checklist → confirm → fix** workflow. Core principle: **always produce the checklist first; only edit code after user confirmation**.
 
 ---
 
-## 输入
+## Trigger Conditions
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| 截图 + 修复描述 | 二选一 | 设计师标注的截图，附文字描述修复点 |
-| Figma 链接 + 区域指引 | 二选一 | Figma 节点链接，用户指定需走查的区域 |
-| 平台范围 | 否 | 仅 H5 / 仅 PC / 两者（默认从描述推断） |
+- User sends designer-annotated screenshots with fix point descriptions
+- User sends a Figma link + specifies the area to review
+- User says "UI walkthrough", "walkthrough fix", or "design review"
 
 ---
 
-## 流程
+## Inputs
 
-### Mode A：截图驱动（设计师标注）
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| Screenshots + fix descriptions | One of these | Designer-annotated screenshots with written fix point descriptions |
+| Figma link + area reference | One of these | Figma node link; user specifies the area/component to review |
+| Platform scope | No | H5 only / PC only / both (default: inferred from the description) |
 
-```
-Step 1 — 分析截图
-  ├── 逐张截图分析标注内容（间距/颜色/字号/圆角等）
-  ├── 从标注中提取具体 CSS 属性和目标值
-  └── 记录平台范围（H5/PC/两者）
+---
 
-Step 2 — 定位代码
-  ├── 用 Glob/Grep 定位相关组件文件
-  ├── 读取文件，找到对应 class/style 的当前值
-  └── 对比截图标注值 vs 代码当前值
+## Workflow
 
-Step 3 — 输出修改清单（⏸️ 等待确认）
-  ├── 按平台分组（仅 H5 / PC+H5 / 仅 PC）
-  ├── 表格格式：截图编号 | 位置描述 | 当前值→目标值 | 文件:行号 | 状态
-  ├── 状态标记：需改 / ✅ 已达标
-  └── 底部统计：需改 N 项，涉及 M 个文件；已达标 K 项
-
-Step 4 — 逐项修复
-  ├── 用户确认后，按清单逐项 Edit
-  ├── 所有修改完成后 type-check
-  └── 报告修复结果
-
-Step 5 — 提交
-  └── 用户确认后 commit
-```
-
-### Mode B：Figma 链接驱动
+### Mode A: Screenshot-driven (designer annotations)
 
 ```
-Step 1 — 获取设计数据
-  ├── 从 URL 提取 node-id
-  ├── 调用 mcp__figma-desktop__get_metadata 获取节点结构
-  ├── 调用 mcp__figma-desktop__get_design_context（forceCode: true）
-  ├── 调用 mcp__figma-desktop__get_screenshot 获取视觉参考
-  └── 按用户指引聚焦到具体区域/组件
+Step 1 — Analyze screenshots
+  ├── Analyze each screenshot's annotations (spacing / color / font size / corner radius / etc.)
+  ├── Extract specific CSS properties and target values from the annotations
+  └── Note platform scope (H5 / PC / both)
 
-Step 2 — 代码比对
-  ├── 读取对应组件文件
-  ├── 逐属性比对：间距/颜色/字号/圆角/字重等
-  ├── CSS 变量映射到项目 Design Token
-  └── 标记所有偏差项
+Step 2 — Locate code
+  ├── Use Glob/Grep to locate the relevant component files
+  ├── Read the files and find the current values for the annotated class/style attributes
+  └── Compare annotation target values vs current code values
 
-Step 3 — 输出修改清单（⏸️ 等待确认）
-  └──（同 Mode A Step 3 格式）
+Step 3 — Output fix checklist (⏸️ Wait for confirmation)
+  ├── Group by platform (H5 only / PC+H5 / PC only)
+  ├── Table format: Screenshot # | Location | Current → Target | File:Line | Status
+  ├── Status labels: Needs fix / ✅ Already correct
+  └── Summary at the bottom: N items need fixing across M files; K items already correct
 
-Step 4 — 逐项修复
-  └──（同 Mode A Step 4）
+Step 4 — Apply fixes item by item
+  ├── After user confirms, apply each Edit per the checklist
+  ├── Run type-check after all edits are complete
+  └── Report fix results
 
-Step 5 — 浏览器验证（可选）
-  ├── 截图当前实现
-  ├── 与 Figma 截图对比
-  └── 有偏差则当场修复
+Step 5 — Commit
+  └── Commit after user confirmation
+```
 
-Step 6 — 提交
-  └── 用户确认后 commit
+### Mode B: Figma link-driven
+
+```
+Step 1 — Fetch design data
+  ├── Extract node-id from the URL
+  ├── Call mcp__figma-desktop__get_metadata to get node structure
+  ├── Call mcp__figma-desktop__get_design_context (forceCode: true)
+  ├── Call mcp__figma-desktop__get_screenshot for visual reference
+  └── Focus on the specific area/component as directed by the user
+
+Step 2 — Code comparison
+  ├── Read the corresponding component files
+  ├── Compare property by property: spacing / color / font size / corner radius / font weight / etc.
+  ├── Map CSS variables to project Design Tokens
+  └── Flag all discrepancy items
+
+Step 3 — Output fix checklist (⏸️ Wait for confirmation)
+  └── (Same format as Mode A Step 3)
+
+Step 4 — Apply fixes item by item
+  └── (Same as Mode A Step 4)
+
+Step 5 — Browser verification (optional)
+  ├── Take a screenshot of the current implementation
+  ├── Compare against Figma screenshot
+  └── Fix any remaining discrepancies on the spot
+
+Step 6 — Commit
+  └── Commit after user confirmation
 ```
 
 ---
 
-## 修改清单格式（强制）
+## Fix Checklist Format (Required)
 
 ```markdown
-### 仅 H5
+### H5 Only
 
-| # | 截图 | 位置 | 当前 → 目标 | 文件:行 | 状态 |
-|---|------|------|-------------|---------|------|
-| H1 | #7 | Tab 组下方间距 | `mb-[42px]` → H5 `mb-[24px]` | `PoolsPage.tsx:32` | 需改 |
-| H2 | #11 | Stats 四宫格间距 | — | — | ✅ 已达标 |
+| # | Screenshot | Location | Current → Target | File:Line | Status |
+|---|-----------|----------|-----------------|-----------|--------|
+| H1 | #7 | Spacing below Tab group | `mb-[42px]` → H5 `mb-[24px]` | `PoolsPage.tsx:32` | Needs fix |
+| H2 | #11 | Stats 2×2 grid spacing | — | — | ✅ Already correct |
 
 ### PC + H5
 ...
 
-### 仅 PC
+### PC Only
 ...
 
-**需改：N 项，涉及 M 个文件 | 已达标：K 项**
+**Needs fix: N items across M files | Already correct: K items**
 ```
 
 ---
 
-## 约束
+## Constraints
 
-1. **先清单后改码**：禁止跳过清单直接修改代码。必须等用户确认
-2. **已达标也要列出**：如果截图标注的目标值与代码当前值一致，标记为"✅ 已达标"而非省略，让用户知晓
-3. **响应式分组**：修改按平台范围分组（仅 H5 / PC+H5 / 仅 PC），避免改错断点
-4. **Design Token 优先**：颜色值必须映射到 Token，不用 hex 硬编码（除非 Figma 本身硬编码，加 `@figma-hardcoded` 注释）
-5. **单次文件限制**：尽量控制在 ≤6 个文件内，超出则分批
-6. **type-check 必过**：修改后必须通过 `pnpm type-check`
-7. **不扩散修改**：只改用户指出的问题，不顺手改周边代码
+1. **Checklist before code**: Never skip the checklist and edit code directly. User confirmation is required.
+2. **List "already correct" items too**: If an annotated target value matches the current code, mark it "✅ Already correct" rather than omitting it — the user needs to know.
+3. **Group by platform**: Group fixes by platform scope (H5 only / PC+H5 / PC only) to avoid editing the wrong breakpoint.
+4. **Design Token first**: Color values must be mapped to Tokens, not written as raw hex (unless the value is hard-coded in Figma itself — add an `@figma-hardcoded` comment in that case).
+5. **File limit per pass**: Aim for ≤ 6 files; split into batches if needed.
+6. **type-check must pass**: Run `pnpm type-check` after all edits and ensure it passes.
+7. **No scope creep**: Only fix the issues the user pointed out; do not opportunistically change surrounding code.
 
 ---
 
-## 成功标准
+## Success Criteria
 
-- [ ] 所有截图/Figma 标注的修复点已逐项分析
-- [ ] 修改清单包含当前值、目标值、文件定位
-- [ ] 用户确认后才执行修改
-- [ ] type-check 通过
-- [ ] 修改范围严格对应清单，无额外改动
+- [ ] Every annotated fix point in the screenshots/Figma has been analyzed
+- [ ] Fix checklist includes current values, target values, and file locations
+- [ ] Changes are only applied after user confirmation
+- [ ] type-check passes
+- [ ] Modifications strictly match the checklist — no extra changes

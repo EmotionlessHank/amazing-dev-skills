@@ -1,79 +1,79 @@
 ---
 name: persona-distill
-description: 从人物文本语料(博主帖子/文章/对话记录)蒸馏可供 AI 扮演的分层工程文件(SOUL/PERSONA/LOREBOOK/STATE/EVAL 五件套),含留出集盲测验证。当用户要求"蒸馏某人/生成某人的 persona/让 AI 扮演某个真实人物进行专业输出"时使用。
+description: Distills a layered engineering artifact set (SOUL/PERSONA/LOREBOOK/STATE/EVAL five-file suite) suitable for AI role-play from a character's text corpus (blogger posts/articles/chat logs), including holdout-set blind-test validation. Use when the user requests "distill a person / generate someone's persona / have AI play a real person for professional output".
 ---
 
-# persona-distill — 人格蒸馏流水线
+# persona-distill — Persona Distillation Pipeline
 
-> 方法论依据(信源审计见 hermes-setup `docs/DD-009-persona-distillation/research/source-audit.md`):
-> Beyond Profile 三层模型(事实/风格/思维,arXiv 2502.12988)· Character Card Spec V3(lorebook 分离)· ChatHaruhi(检索式记忆)· written-voice-replication(量化风格画像+数值验证)· InCharacter/RoleBench(评测)。
+> Methodology references (source audit at hermes-setup `docs/DD-009-persona-distillation/research/source-audit.md`):
+> Beyond Profile three-layer model (facts/style/cognition, arXiv 2502.12988) · Character Card Spec V3 (lorebook separation) · ChatHaruhi (retrieval-augmented memory) · written-voice-replication (quantified style profile + numerical validation) · InCharacter/RoleBench (evaluation).
 
-## 适用与不适用
+## When to Use / When Not to Use
 
-- ✅ 有 ≥30 条该人物的一手文本(帖子/文章/消息),希望蒸馏出"思维方式+语言风格+领域知识"三位一体的可扮演角色。
-- ❌ 语料 <30 条(few-shot 直塞提示词即可,不值得跑流水线);❌ 虚构角色无语料(直接创作,不是蒸馏)。
+- ✅ You have ≥30 first-person texts (posts/articles/messages) from the character, and want to distill a role that unifies "thinking patterns + language style + domain knowledge".
+- ❌ Corpus < 30 samples (few-shot injection into the prompt is sufficient; the pipeline is not worth running). ❌ Fictional character with no corpus (that's creative writing, not distillation).
 
-## 核心原则
+## Core Principles
 
-1. **思维层重于风格层**:纯 profile + 语气模仿抓不住人;价值观、方法论、推理模式才是"灵魂"(Beyond Profile 的核心批判)。
-2. **知识与人格分离**:领域知识进独立 LOREBOOK(条目带触发关键词),时效状态进独立 STATE——persona 文件保持稳定,同步新语料只改 STATE。
-3. **逐条溯源**:每个提取结论必须标注语料出处(消息 ID/篇名),禁止无出处的"合理想象"。
-4. **先留出后提取**:盲测集在提取前切走,绝不参与提取——否则验证无效。
-5. **量化风格用脚本**:帖长/句长/签名词频用确定性脚本算,不靠 LLM 目测。
-6. **文体统计用原始文本**:若语料是整理过的笔记(加了标题/标注/格式),回到原始来源取 raw text 再统计。
+1. **Cognitive layer over style layer**: Pure profile + tone imitation misses the person; values, methodology, and reasoning patterns are the "soul" (the central critique in Beyond Profile).
+2. **Separate knowledge from persona**: Domain knowledge goes into a standalone LOREBOOK (entries with trigger keywords); time-sensitive state goes into a standalone STATE — the persona file stays stable, and syncing new corpus only requires updating STATE.
+3. **Source every claim**: Every extracted conclusion must cite the corpus source (message ID / article title); unsourced "reasonable inference" is prohibited.
+4. **Holdout before extraction**: The blind-test set is split off before extraction begins and must never participate in extraction — otherwise validation is invalid.
+5. **Quantify style with scripts**: Post length / sentence length / signature word frequency are computed with deterministic scripts, not by LLM eyeballing.
+6. **Run stylometrics on raw text**: If the corpus consists of edited notes (with added headings/annotations/formatting), go back to the original source and pull raw text for statistics.
 
-## 流水线(五环节)
+## Pipeline (Five Stages)
 
-### ① 语料盘点 corpus-inventory
-- 统计:篇数、时间跨度、类型分布(按输出格式分类)。
-- **切留出集**:10–15%,覆盖每种输出格式 ≥1 条,避开「时效状态关键帖」(其信息会进 STATE 的帖子不可留出)。
-- 量化风格画像(脚本):平均/中位帖长(字符)、句数分布、签名词频率表、emoji 使用率、数字/表格出现率。
+### ① Corpus Inventory
+- Collect statistics: count, time span, type distribution (categorized by output format).
+- **Split holdout set**: 10–15%, covering ≥1 sample of every output format; exclude "time-sensitive state key posts" (posts whose information will go into STATE cannot be held out).
+- Quantified style profile (scripts): average/median post length (characters), sentence count distribution, signature word frequency table, emoji usage rate, number/table occurrence rate.
 
-### ② 分层提取(4 pass,只用提取集)
-| Pass | 层 | 提取什么 |
+### ② Layered Extraction (4 passes, extraction set only)
+| Pass | Layer | What to Extract |
 |---|---|---|
-| L1 | 事实层 | 身份、平台、资历、自称、关系称谓、知识边界(他不谈什么) |
-| L2 | 风格层 | 签名词癖、句式特征、emoji 谱、格式模板(按帖型归纳)、禁忌(他绝不会说的话);叠加 ① 的量化画像 |
-| L3 | 思维层 | 价值观、世界观、**方法论步骤**(他拿到新信息后怎么推理)、立场倾向、不确定性表达习惯 |
-| L4 | 知识层 | 领域知识条目化:每条 = 触发关键词 keys + 内容 + 出处;时效性内容单独标记进 STATE |
+| L1 | Fact layer | Identity, platform, credentials, self-reference, relational terms, knowledge boundaries (what they don't discuss) |
+| L2 | Style layer | Signature verbal tics, sentence structure patterns, emoji palette, format templates (organized by post type), taboos (things they would never say); overlaid with ① quantified profile |
+| L3 | Cognitive layer | Values, worldview, **methodology steps** (how they reason when they receive new information), stance tendencies, uncertainty expression habits |
+| L4 | Knowledge layer | Domain knowledge itemized: each entry = trigger keyword `keys` + content + source; time-sensitive content separately marked for STATE |
 
-### ③ 合成五件套
-产物目录结构(模板见本 skill `templates/`):
+### ③ Synthesize the Five-File Suite
+Output directory structure (templates at `templates/` in this skill):
 ```
-<人物>/000_persona/
-├── SOUL.md       # L1+L3,第一人称「我是谁/信什么/怎么工作/边界」→ 系统提示词常驻
-├── PERSONA.md    # L2,角色卡+风格规范(定性+定量画像)+输出格式模板+禁忌 → 常驻
-├── LOREBOOK.md   # L4,知识条目(keys+内容+出处)→ 检索注入,小库可全量
-├── STATE.md      # L4 时效快照,标注「截至日期+水位 ID」→ 每次对话前置注入
-├── EVAL.md       # L5,留出集清单+盲测协议+判分 rubric+历次成绩 → 不注入,维护用
-└── examples/     # few-shot 原文范例,每种帖型 ≥2 条,文件名带帖型标签(仅取提取集)
+<character>/000_persona/
+├── SOUL.md       # L1+L3, first-person "who I am / what I believe / how I work / my limits" → always-on system prompt
+├── PERSONA.md    # L2, character card + style spec (qualitative + quantitative profile) + output format templates + taboos → always-on
+├── LOREBOOK.md   # L4, knowledge entries (keys + content + source) → retrieval injection; full injection for small libraries
+├── STATE.md      # L4 time-sensitive snapshot, annotated with "as-of date + watermark ID" → injected before every conversation
+├── EVAL.md       # L5, holdout set manifest + blind-test protocol + scoring rubric + historical scores → not injected, for maintenance
+└── examples/     # few-shot original samples, ≥2 per post type, filenames tagged with post type (extraction set only)
 ```
 
-### ④ 留出集盲测
-对每条留出帖:
-1. 从原帖**只抽取中性数据简报**(日期、指标读数、近期上下文),剥离原帖措辞;
-2. **actor 子代理**只读五件套 + 数据简报,产出该日帖子(actor 绝不可见原帖);
-3. **judge 子代理**对照(原帖, 生成帖),三维判分(每维 0–2 分,≥4 且无 0 为通过):
-   - 内容方向:结论/信号判断是否与原帖一致
-   - 风格相似:签名词、句式、emoji、长度是否像本人(对照 PERSONA 量化画像)
-   - 格式正确:是否用对了该场景的输出模板
-4. 通过率 = 通过帖数 / 留出帖数,目标 **≥80%**。
+### ④ Holdout Set Blind Test
+For each holdout post:
+1. Extract only a **neutral data brief** from the original post (date, metric readings, recent context), stripping all original phrasing;
+2. The **actor sub-agent** reads only the five-file suite + data brief and produces the post for that day (the actor must never see the original);
+3. The **judge sub-agent** scores against (original post, generated post) on three dimensions (0–2 each; ≥4 with no zeros = pass):
+   - Content direction: whether conclusions/signal calls match the original
+   - Style similarity: whether signature words, sentence patterns, emoji, and length resemble the person (against PERSONA quantitative profile)
+   - Format correctness: whether the correct output template was used for this scenario
+4. Pass rate = passing posts / holdout posts; target **≥80%**.
 
-### ⑤ 迭代收敛
-- 不达标:把失败案例的差异归因(缺签名词?方法论步骤错?格式张冠李戴?)回填到对应层文件,重测失败帖;
-- 达标:把留出集中的时效信息补进 STATE(此时才允许),在 EVAL.md 记录成绩与日期,定稿。
+### ⑤ Iterative Convergence
+- If below target: attribute failures (missing signature words? wrong methodology steps? wrong format template?) and backfill into the corresponding layer file, then retest failed posts.
+- If on target: backfill time-sensitive information from the holdout set into STATE (only allowed at this point), record scores and date in EVAL.md, and finalize.
 
-**常见失真模式**(首个实例 Crypto Chan 实测,2026-06,3/6→6/6 两轮收敛):
-1. **模仿过度/密度膨胀**(最高频):actor 把人物的极简输出强行放量成满配格式、签名元素堆砌。解法:PERSONA 写「密度纪律」——密度跟随当日素材信息量、装饰元素准入判据、低频口癖配额(如某词全语料仅 10% 帖出现 → 默认不用)。
-2. **信号升级捏造**(最危险):把素材里的轻信号改写成体系里更重的另一个信号(如「90 日均值摸 1.0」→「365 日橙蓝相交」)。解法:PERSONA 写「内容真实性红线」——每个完成态断言须有素材字面依据,无依据一律未完成态措辞;LOREBOOK 中易混信号显式标注区别。
-3. **范例覆盖缺口**:某帖型在 examples/ 无同型范例时,actor 会乱借最近似的重型模板。解法:每种帖型(含最不起眼的极简型)都放 ≥2 条范例;规则给「拿不准就用最轻形态」的兜底。
+**Common distortion patterns** (from the first real instance, Crypto Chan, June 2026, converged 3/6→6/6 in two rounds):
+1. **Over-imitation / density inflation** (most frequent): The actor inflates the character's minimal output into fully-loaded format with stacked signature elements. Fix: write a "density discipline" in PERSONA — density follows the information volume of the day's material; criteria for when decoration elements are permitted; low-frequency verbal tic quotas (e.g., if a phrase appears in only 10% of corpus posts → don't use it by default).
+2. **Signal escalation fabrication** (most dangerous): Rewrites a weak signal from the source material into a heavier signal in the system (e.g., "90-day MA touched 1.0" → "365-day orange-blue crossover"). Fix: write a "content integrity red line" in PERSONA — every completed-state assertion requires literal textual support from the source material; anything without support must use incomplete-state phrasing. Explicitly annotate easily-confused signals in LOREBOOK.
+3. **Example coverage gaps**: When a post type has no matching example in `examples/`, the actor borrows the nearest heavy template instead. Fix: include ≥2 examples for every post type (including the most unremarkable minimal type); add a fallback rule: "when in doubt, use the lightest form".
 
-## 维护协议(写进产物 EVAL.md)
-- 新语料同步后:只更新 STATE.md(水位 ID + 新状态);
-- 人物风格/方法论出现明显演变(新系列、新口癖)时:增量更新 PERSONA/LOREBOOK 并补 examples,重跑一轮小盲测;
-- SOUL 原则上不动(动 = 人设变更,需人工确认)。
+## Maintenance Protocol (write into the output EVAL.md)
+- After syncing new corpus: update only STATE.md (watermark ID + new state);
+- When the character's style/methodology shows a clear shift (new series, new verbal tic): incrementally update PERSONA/LOREBOOK and add examples, then run a small blind test;
+- SOUL should not be changed (changing it = persona overhaul, requires human confirmation).
 
-## 集成提示
-- Claude/DeepSeek 系统提示词:SOUL + PERSONA 常驻,STATE 前置,LOREBOOK 按需(小库全量);
-- DeepSeek 等弱意图补全模型:务必保留 PERSONA 中的 few-shot 与严格格式模板;
-- 需要 SillyTavern 等平台时,五件套可机械映射 CCv3 字段(description←L1, personality←L3 摘要, mes_example←examples, character_book←LOREBOOK)。
+## Integration Notes
+- Claude/DeepSeek system prompt: SOUL + PERSONA always-on, STATE prepended, LOREBOOK on demand (full injection for small libraries);
+- Weak intent-completion models (e.g., DeepSeek): always keep the few-shot examples and strict format templates in PERSONA;
+- For SillyTavern and similar platforms: the five-file suite maps mechanically to CCv3 fields (description←L1, personality←L3 summary, mes_example←examples, character_book←LOREBOOK).

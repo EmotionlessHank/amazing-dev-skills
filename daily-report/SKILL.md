@@ -1,131 +1,130 @@
 ---
 name: daily-report
-description: 一键生成每日开发日报。当用户说 "/daily-report"、"日报"、"今日总结"、"生成日报"、"daily report" 时触发。自动扫描当日所有分支（含 worktree）的 git 提交记录，按大厂日报格式输出，并归档至 .progress/daily-reports/。
+description: Generate a daily development report with one command. Triggers when the user says "/daily-report", "daily report", "today's summary", "generate report", or "daily summary". Automatically scans all branch commits across worktrees for the current day, outputs a structured report in a professional format, and archives it to .progress/daily-reports/.
 version: 1.0.0
 ---
 
-# /daily-report — 每日开发日报生成
+# /daily-report — Daily Development Report Generator
 
-自动扫描当天所有开发活动，生成结构化日报，归档至项目 `.progress/daily-reports/` 目录。
+Automatically scans all development activity for the day, generates a structured report, and archives it to the project's `.progress/daily-reports/` directory.
 
 ---
 
-## 触发条件
+## Trigger Conditions
 
-用户说出以下任意关键词：
+Activate on any of the following keywords:
 - `/daily-report`
-- `日报`、`今日总结`、`生成日报`、`每日总结`
-- `daily report`、`daily summary`
+- `daily report`, `today's summary`, `generate report`, `daily summary`
 
 ---
 
-## 执行步骤
+## Execution Steps
 
-### Step 1：数据采集
+### Step 1: Data Collection
 
-并行执行以下 git 命令，收集当天所有开发活动：
+Run the following git commands in parallel to gather all development activity for the day:
 
 ```bash
-# 1. 获取今天日期
+# 1. Get today's date
 DATE=$(date +%Y-%m-%d)
 
-# 2. 所有分支今日 commit（含 worktree）
+# 2. All commits across all branches today (including worktrees)
 git log --all --since="${DATE}T00:00:00" --format="%h %s (%D)" --date=short
 
-# 3. 活跃 worktree 列表
+# 3. List active worktrees
 git worktree list
 
-# 4. 各功能分支与 main 的 diff stat
+# 4. Diff stat between each feature branch and main
 git diff --stat main...<branch> | tail -3
 ```
 
-对每个活跃 worktree，进入目录执行相同的 `git log` 命令。
+For each active worktree, enter its directory and run the same `git log` command.
 
-### Step 2：数据分析
+### Step 2: Data Analysis
 
-将采集到的 commit 按以下维度分组：
+Group the collected commits along the following dimensions:
 
-1. **按分支归类**：每个功能分支独立列出
-2. **识别状态**：
-   - 分支已合入 main → `✅ 已合入 main`
-   - 分支有 commit 但未合并 → `🔵 开发完成，待合并` 或 `🟡 开发中`
-   - 分支有 Review 修复 commit → 统计 Review 轮次
-3. **统计汇总**：总 commit 数、总代码行变更、涉及文件数
+1. **By branch**: list each feature branch separately
+2. **Identify status**:
+   - Branch merged into main → `✅ Merged to main`
+   - Branch has commits but not yet merged → `🔵 Complete, pending merge` or `🟡 In progress`
+   - Branch has review-fix commits → count the number of review rounds
+3. **Aggregate stats**: total commit count, total lines changed, number of files touched
 
-### Step 3：生成日报
+### Step 3: Generate Report
 
-按以下模板输出日报内容：
+Output the report using the following template:
 
 ```markdown
-# Oddfi 前端日报 | {YYYY-MM-DD}
+# Frontend Daily Report | {YYYY-MM-DD}
 
-## 今日进展
+## Today's Progress
 
-| # | 功能模块 | 状态 | 说明 |
-|---|---------|------|------|
-| 1 | {模块名} | {状态标记} | {一句话说明} |
+| # | Feature Module | Status | Notes |
+|---|---------------|--------|-------|
+| 1 | {module name} | {status marker} | {one-line description} |
 | 2 | ... | ... | ... |
 
-## 关键数据
+## Key Metrics
 
-- Commit：{N} 个 | 新增/修改代码：~{N} 行 | 涉及文件：{N} 个
-- Code Review：{N} 轮（{版本}），{修复要点}
-（若当天无 Review 活动，省略此行）
+- Commits: {N} | Lines added/modified: ~{N} | Files touched: {N}
+- Code Review: {N} round(s) ({version}), {key fixes}
+(Omit this line if no review activity today)
 
-## 提交明细
+## Commit Details
 
-### {分支名} → {合并状态}
+### {branch name} → {merge status}
 
-| Commit | 说明 |
-|--------|------|
+| Commit | Description |
+|--------|-------------|
 | `{hash}` | {commit message} |
 
-（每个活跃分支一个子表格）
+(One sub-table per active branch)
 
-## 明日计划
+## Tomorrow's Plan
 
-- {基于当天 🟡 进行中的任务，推断明日优先项}
-- {基于 🔵 待合并的分支，建议合并}
-- {其他合理建议}
+- {Infer top priorities from today's 🟡 in-progress tasks}
+- {Suggest merging 🔵 pending-merge branches}
+- {Other reasonable suggestions}
 
 ---
 
-> 状态标记：✅ 已完成 🔵 待合并 🟡 进行中 🔴 阻塞
+> Status markers: ✅ Done  🔵 Pending merge  🟡 In progress  🔴 Blocked
 ```
 
-### Step 4：归档
+### Step 4: Archive
 
-1. 将日报写入 `.progress/daily-reports/{YYYY-MM-DD}.md`
-2. 更新 `.progress/daily-reports/INDEX.md` 索引表，追加当日条目
-3. 在对话中输出完整日报内容，方便用户直接复制到飞书
-
----
-
-## 模板字段规则
-
-| 字段 | 规则 |
-|------|------|
-| 功能模块名 | 从 commit message 的 scope 提取（如 `feat(wallet)` → 钱包连接弹窗），相同 scope 合并为一行 |
-| 状态标记 | ✅ 已合入 main / 🔵 待合并 / 🟡 进行中 / 🔴 阻塞 |
-| 说明 | 不超过 30 字，聚焦"做了什么"而非"怎么做" |
-| 关键数据 | 从 `git diff --stat` 和 `git log --oneline` 汇总 |
-| 明日计划 | 基于当天未完成项推断，不超过 3 条 |
+1. Write the report to `.progress/daily-reports/{YYYY-MM-DD}.md`
+2. Update the `.progress/daily-reports/INDEX.md` index by appending an entry for today
+3. Output the full report in the conversation so the user can copy it directly
 
 ---
 
-## 边界情况
+## Template Field Rules
 
-| 场景 | 处理 |
-|------|------|
-| 当天无 commit | 输出"今日无代码提交记录"，跳过归档 |
-| worktree 已删除但分支仍在 | 通过 `git log --all` 仍可获取，正常列出 |
-| 跨天开发（0 点前后） | 以 `--since` 当天 00:00 为准，不回溯 |
-| 同一分支多人提交 | 按 author 过滤，仅统计当前用户 |
-| 用户指定日期 | 支持 `/daily-report 2026-03-15` 格式，修改 DATE 变量 |
+| Field | Rule |
+|-------|------|
+| Feature module name | Extract from the scope in the commit message (e.g., `feat(wallet)` → Wallet Connect Modal); merge commits with the same scope into one row |
+| Status marker | ✅ Merged to main / 🔵 Pending merge / 🟡 In progress / 🔴 Blocked |
+| Notes | Max 15 words, focus on "what was done" rather than "how it was done" |
+| Key metrics | Aggregated from `git diff --stat` and `git log --oneline` |
+| Tomorrow's plan | Inferred from today's incomplete items; no more than 3 entries |
 
 ---
 
-## 输出规范
+## Edge Cases
 
-- 对话中输出完整日报 markdown，方便直接复制
-- 归档文件路径在输出末尾提示：`📁 已归档至 .progress/daily-reports/{date}.md`
+| Scenario | Handling |
+|----------|----------|
+| No commits today | Output "No code commits recorded today" and skip archiving |
+| Worktree deleted but branch still exists | Still retrievable via `git log --all`; list normally |
+| Cross-midnight development | Use `--since` today 00:00 as the cutoff; do not look back further |
+| Multiple authors on one branch | Filter by author; count only the current user's commits |
+| User specifies a date | Support `/daily-report 2026-03-15` format; update the DATE variable accordingly |
+
+---
+
+## Output Specification
+
+- Output the full report markdown in the conversation for easy copying
+- Display the archive path at the end of the output: `📁 Archived to .progress/daily-reports/{date}.md`

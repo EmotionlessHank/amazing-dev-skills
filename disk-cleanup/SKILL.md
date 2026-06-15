@@ -1,114 +1,114 @@
 ---
 name: disk-cleanup
-description: 开发存储磁盘清理。当用户说 "/disk-cleanup"、"磁盘满了"、"硬盘占用太多"、"清理 worktree"、"空间不足" 时触发。分层调研定位大头（worktree/Docker/缓存/用户文件），逐类安全核查后清理，全程零数据丢失。与 mac-cleanup（系统应用审计）配套。
+description: Developer storage disk cleanup. Triggers when the user says "/disk-cleanup", "disk is full", "hard drive is almost full", "clean up worktrees", or "out of space". Uses a layered investigation to locate the largest consumers (worktrees/Docker/caches/user files), performs safety checks per category before deletion, with zero data loss throughout. Pairs with mac-cleanup (system app audit).
 version: 1.0.0
 ---
 
-# /disk-cleanup — 开发存储磁盘清理
+# /disk-cleanup — Developer Storage Disk Cleanup
 
-四阶段流程：**分层调研定位大头 → 安全核查 → 分类清理 → 验证释放效果**。
+Four-phase process: **layered investigation to locate top consumers → safety checks → categorized cleanup → verify reclaimed space**.
 
-核心原则：
-- 调研和清理是两个独立步骤，**调研先出报告，用户点头后才动手删**
-- 每一类删除前都有对应的安全核查，宁可少删不可误删
-- 与 [mac-cleanup](../mac-cleanup) 分工：本技能管**开发存储**（git worktree、Docker、开发缓存、用户媒体、临时仓库）；mac-cleanup 管**系统层**（应用、Homebrew/npm/pip、Xcode DerivedData）。磁盘告急时两个连跑覆盖最全。
+Core principles:
+- Investigation and cleanup are two separate steps — **produce the report first, only proceed after user sign-off**
+- Every category has a corresponding safety check before deletion — err on the side of deleting less rather than deleting incorrectly
+- Division of responsibility with [mac-cleanup](../mac-cleanup): this skill handles **developer storage** (git worktrees, Docker, dev caches, user media, temp repos); mac-cleanup handles **system layer** (apps, Homebrew/npm/pip, Xcode DerivedData). Run both together for maximum coverage when disk space is critically low.
 
 ---
 
-## 触发条件
+## Trigger Conditions
 
-用户说出以下任意关键词：
+Activate on any of the following keywords:
 - `/disk-cleanup`
-- `磁盘满了`、`硬盘占用`、`空间不足`、`清理 worktree`
-- `disk full`、`worktree cleanup`
+- `disk is full`, `hard drive usage`, `out of space`, `clean up worktrees`
+- `disk full`, `worktree cleanup`
 
 ---
 
-## 阶段 1：分层调研（只读，先出报告）
+## Phase 1: Layered Investigation (read-only, report first)
 
 ```bash
-df -h /                                          # 总盘 + 可用（APFS 看 Avail，不看 Capacity 百分比）
-du -xsh ~/* 2>/dev/null | sort -rh | head -20    # 用户目录大头
-du -xsh ~/Library/* | sort -rh | head -20        # 通常 Library 最大
+df -h /                                          # Total disk + available (APFS: check Avail, not Capacity %)
+du -xsh ~/* 2>/dev/null | sort -rh | head -20    # Top consumers in home directory
+du -xsh ~/Library/* | sort -rh | head -20        # Library is usually the largest
 du -xsh ~/Library/"Application Support"/* ~/Library/Containers/* ~/Library/Caches/* | sort -rh
-du -xsh {WORK_DIR}/* | sort -rh                  # 各项目目录
+du -xsh {WORK_DIR}/* | sort -rh                  # Per-project directories
 ```
 
-常见大头（按实测经验，前端项目尤甚）：
-- **`<项目>/.claude/worktrees/`** — Claude Code worktree 堆积，前端项目每个自带 1.5~2G 的 `node_modules` + `.next`，往往是单项最大可回收源（实测一个项目 32 个 worktree 占 22G）
-- **`~/Library/Containers/com.docker.docker`** — Docker 构建缓存 + 无用镜像（实测可回收 19G）
-- **`~/Library/Caches/`** — Spotify / JetBrains / go-build / ms-playwright / Homebrew，全部可安全重建
-- **`~/Movies`、`~/Downloads`、名字带 temp 的项目目录** — 需用户决定
+Common top consumers (from real-world experience, especially front-end projects):
+- **`<project>/.claude/worktrees/`** — accumulated Claude Code worktrees; each front-end project carries 1.5–2 GB of `node_modules` + `.next`, often the single largest reclaimable source (real-world case: 32 worktrees in one project = 22 GB)
+- **`~/Library/Containers/com.docker.docker`** — Docker build cache + unused images (real-world: up to 19 GB reclaimable)
+- **`~/Library/Caches/`** — Spotify, JetBrains, go-build, ms-playwright, Homebrew — all safe to rebuild
+- **`~/Movies`**, **`~/Downloads`**, project directories with "temp" in the name — require user decision
 
-报告按「可回收大小 × 安全度」排序，标明哪些可自动清、哪些需用户拍板，**等用户确认范围后再进入阶段 2**。
+Sort the report by "reclaimable size × safety level", indicate which items can be auto-cleaned and which require user approval, **wait for user to confirm scope before entering Phase 2**.
 
 ---
 
-## 阶段 2：安全核查（删除前的硬性门槛）
+## Phase 2: Safety Checks (hard gates before deletion)
 
-### Git worktree
+### Git worktrees
 
-1. `git worktree list` 找出**注册的** worktree；目录数往往多于注册数（存在孤儿目录）
-2. ⚠️ **陷阱：孤儿目录的 git 读数会撒谎** —— 对非注册目录跑 `git -C <dir> status/log` 会 fallback 到主仓，显示「main / 今天有提交 / 0 改动」，全是主仓的数据。孤儿目录的活跃度只能看**文件 mtime**
-3. ⚠️ **陷阱：squash 合并下 `git merge-base --is-ancestor` 永远报「未合并」**，不能作为清理依据。改用三条判定：
-   - `git -C <wt> status --porcelain` 为空（无未提交改动）
-   - `git rev-list --count origin/<branch>..<branch>` 检查未推送提交（报「无远程分支」= 从未推过，需注意）
-   - `git worktree remove` 只删工作副本，**分支引用永远保留在主仓**，可随时重建
-4. 活跃度判定：feature 分支看 `git log -1 --format=%cs`；main 上的 worktree 和孤儿目录看实际文件 mtime（排除 node_modules）
-5. 孤儿目录（`git worktree remove` 报 "is not a working tree"）：逐一 `ls -A` 检查，**只含 `.next` / `node_modules` / `.omc` / `.progress` / `tsconfig.tsbuildinfo` 等构建产物和会话状态才可 `rm -rf`**，发现源码立即停手报告
+1. `git worktree list` to identify **registered** worktrees; the actual directory count often exceeds the registered count (orphan directories exist)
+2. ⚠️ **Trap: git output lies for orphan directories** — running `git -C <dir> status/log` on an unregistered directory falls back to the main repo and reports "main / committed today / 0 changes" — all data from the main repo. Orphan directory activity can only be assessed via **file mtime**
+3. ⚠️ **Trap: `git merge-base --is-ancestor` always reports "not merged" after squash merges** — do not use this as a cleanup criterion. Use these three checks instead:
+   - `git -C <wt> status --porcelain` is empty (no uncommitted changes)
+   - `git rev-list --count origin/<branch>..<branch>` to check unpushed commits (reports "no remote branch" = never pushed, flag for attention)
+   - `git worktree remove` only deletes the working copy — **branch refs are always preserved in the main repo** and can be recreated at any time
+4. Activity assessment: for feature branches check `git log -1 --format=%cs`; for worktrees on main and orphan directories check actual file mtime (excluding node_modules)
+5. Orphan directories (`git worktree remove` reports "is not a working tree"): inspect each with `ls -A` — **only delete with `rm -rf` if they contain only build artifacts and session state such as `.next`, `node_modules`, `.omc`, `.progress`, `tsconfig.tsbuildinfo`**; stop immediately and report if source files are found
 
 ### Docker
 
 ```bash
-docker system df            # 看 RECLAIMABLE 列
-docker builder prune -af    # 构建缓存（通常是大头）
-docker image prune -af      # 无用镜像
-# 卷（Volumes）不动 —— 含数据库数据
+docker system df            # Check the RECLAIMABLE column
+docker builder prune -af    # Build cache (usually the biggest consumer)
+docker image prune -af      # Unused images
+# Volumes — do NOT touch — contain database data
 ```
 
-`Docker.raw` 是稀疏文件，prune 后空间逐步归还系统；想立即回收就重启 Docker Desktop。
+`Docker.raw` is a sparse file; space is gradually returned to the system after pruning. To reclaim space immediately, restart Docker Desktop.
 
-### 应用缓存
+### Application caches
 
-删除前 `pgrep -fl <app>` 确认应用没在运行（JetBrains 运行中删缓存可能索引损坏）。可安全清：`~/Library/Caches/` 下的 JetBrains、com.spotify.client、go-build、ms-playwright、Homebrew。
+Before deleting, run `pgrep -fl <app>` to confirm the application is not running (deleting JetBrains cache while running may corrupt indexes). Safe to clean: JetBrains, com.spotify.client, go-build, ms-playwright, Homebrew entries under `~/Library/Caches/`.
 
-### 用户文件（Movies / Downloads / temp 项目）
+### User files (Movies / Downloads / temp project repos)
 
-1. **删前必须 `ls -lhR` 看实际内容**，不能凭目录名删 —— 实测案例：「personal movie」实际是下载的动漫（可删），但同目录的剪映工程文件是用户创作内容（必须保留并说明）
-2. 下载的影视/媒体可删（可重新下载）；**用户创作的素材（剪映工程、录屏、照片）保留**，不确定就问
-3. **临时 git 仓库**：先 `git branch -vv` + `git log --branches --not --remotes` 检查未推送分支；有则 `git push <remote> --all` 全量归档到远程，**确认推送成功后才删本地**
-4. push 报 `Repository not found` / 403 / 404 → 多账号场景：`gh auth status` 列账号 → 切到能看到仓库的账号 → 重试 → **成功后切回原默认账号**
-
----
-
-## 阶段 3：执行
-
-- 大体积 `rm -rf` 和 docker prune 后台并行跑
-- worktree 批量删：保留名单用 case 跳过，`git worktree remove` 失败回退 `--force`（前提：已核查无未提交改动），最后 `git worktree prune`
+1. **Always `ls -lhR` to inspect actual contents before deleting** — never delete based on directory name alone. Real-world case: a "personal movie" folder turned out to be downloaded anime (deletable), but the same directory contained CapCut project files (user-created content that must be kept and flagged)
+2. Downloaded movies/media can be deleted (re-downloadable); **user-created assets (CapCut projects, screen recordings, photos) must be kept** — ask if uncertain
+3. **Temporary git repos**: first run `git branch -vv` + `git log --branches --not --remotes` to check for unpushed branches; if found, run `git push <remote> --all` to archive everything to remote — **only delete local copy after confirming the push succeeded**
+4. Push reports `Repository not found` / 403 / 404 → multi-account scenario: `gh auth status` to list accounts → switch to the account that can see the repo → retry → **switch back to the original default account after success**
 
 ---
 
-## 阶段 4：验证与汇报
+## Phase 3: Execution
+
+- Run large `rm -rf` operations and docker prune in the background in parallel
+- Batch delete worktrees: use a case statement to skip items on the keep list, fall back to `git worktree remove --force` if the standard command fails (only after confirming no uncommitted changes), then run `git worktree prune`
+
+---
+
+## Phase 4: Verify and Report
 
 ```bash
-df -h /                # 对比清理前后 Avail
-du -xsh <各清理目标>    # 分项核对
+df -h /                # Compare Avail before and after cleanup
+du -xsh <each target>  # Per-item verification
 ```
 
-汇报格式：总释放量 + 分项明细（每项：释放多少、做了什么安全核查、保留了什么及原因）。
+Report format: total space reclaimed + itemized breakdown (each item: how much was reclaimed, what safety checks were performed, what was kept and why).
 
 ---
 
-## 成功标准
+## Success Criteria
 
-- 磁盘可用空间显著回升，且与分项明细加总一致
-- 零数据丢失：所有删除项事先通过对应核查（无未提交 / 未推送 / 非用户创作）
-- 用户拍板项（媒体文件、temp 仓库）均先报告内容再执行
+- Available disk space has increased significantly and matches the sum of itemized reclaim figures
+- Zero data loss: every deleted item passed its corresponding safety check (no uncommitted / unpushed changes / no user-created content)
+- All user-decision items (media files, temp repos) were reported with their contents before execution
 
-## 复发预防
+## Preventing Recurrence
 
-worktree 堆积会复发。建议：功能合并后顺手 `git worktree remove`，或每隔几周重跑本技能的调研阶段。
+Worktree accumulation will happen again. Recommended practice: run `git worktree remove` right after merging a feature branch, or re-run the investigation phase of this skill every few weeks.
 
-## 实测战绩
+## Real-world Results
 
-首次执行（2026-06）：磁盘可用空间 35G → 97G，释放约 62G（worktree 20G + Docker 19G + 缓存 9G + 媒体/temp 仓库 24G），零数据丢失（15 个未推送分支先归档到远程私有仓再删本地）。
+First run (2026-06): available disk space went from 35 GB to 97 GB — approximately 62 GB reclaimed (worktrees 20 GB + Docker 19 GB + caches 9 GB + media/temp repos 24 GB), zero data loss (15 unpushed branches archived to a remote private repo before local deletion).

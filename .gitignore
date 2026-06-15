@@ -1,3 +1,6 @@
 
 # OMC session/state — not part of the skills library
 .omc/
+
+# Internal skill-review history (not part of the public library)
+.skill-review/

@@ -40,7 +40,7 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 | Skill | Description |
 |-------|-------------|
 | [autopilot](./autopilot) | Fully autonomous development pipeline: batched coding → parallel subagent code review → auto-triage of review findings → delivery docs + handoff to human QA. Multi-project template with placeholder substitution. |
-| [feat](./feat) | Feature planning lifecycle (pairs with autopilot): scope analysis → real codebase research → DD/spec writing → 1–3 agent plan review → confirmation gate → handoff to autopilot. |
+| [feat](./feat) | Feature planning lifecycle (pairs with autopilot): scope analysis → real codebase research → grill/clarification gate (design-tree interview, embeds `grill-me`) → DD/spec writing → 1–3 agent plan review → confirmation gate → handoff to autopilot. |
 | [worktree-dev](./worktree-dev) | Enforces git worktree isolation for every development session: branch creation, env symlinks, directory lock, pre-batch read lists, and agent delegation constraints. |
 | [parallel-worktree](./parallel-worktree) | Orchestrates parallel worktree development across multiple agents: task decomposition, file-ownership conflict detection, focused context injection, and merge guidance. Includes Anthropic CCC pattern reference. |
 | [partial-commit](./partial-commit) | Commits only the current session's changes, ignoring parallel-tab modifications — by diffing against a session-start git snapshot. |
@@ -53,7 +53,7 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 | [prd-writing](./prd-writing) | Produces production-grade PRDs using 6 proven PM writing patterns: display+rules dual-column, phase drill-down, table comparison, edge case sections, domain education, and analytics specs. |
 | [ui-design-plan](./ui-design-plan) | Transforms a vague "design the UI" request into a structured DAG execution plan: reads PRD, builds a competitor analysis matrix, audits reusable design system assets, and assembles a full design pipeline. |
 | [ui-walkthrough](./ui-walkthrough) | Generates a structured UI walkthrough document for a feature, covering user flows, component breakdown, interaction states, and edge cases. |
-| [grill-me](./grill-me) | Relentlessly interviews you about a plan or design until every branch of the decision tree is resolved. Use it to stress-test ideas before committing to implementation. |
+| [grill-me](./grill-me) | Relentlessly interviews you about a plan or design until every branch of the decision tree is resolved. Use it to stress-test ideas before committing to implementation. (Also embedded as Phase 3.1 of `feat` — use this standalone for non-feat plans.) |
 
 ### UI Implementation & Design Fidelity
 

@@ -1,7 +1,7 @@
 ---
 name: feat
-description: Full lifecycle for the "planning phase" of feature development. Triggers when the user says "/feat", "develop feature", "add feature", "implement XX feature", "write a plan", or "write DD". Workflow: requirement scope analysis → real codebase research (code is ground truth · pull latest · read-only server verification when needed) → collaborative DD plan authoring → 1–3 review agents based on risk level → main flow handles review findings → confirmation gate → hand off to autopilot for development. Solves three high-frequency problems: "forgot to create a branch/worktree", "assumed code behavior from training data", and "coded before plan was reviewed and confirmed".
-version: 2.0.0
+description: Full lifecycle for the "planning phase" of feature development. Triggers when the user says "/feat", "develop feature", "add feature", "implement XX feature", "write a plan", "write DD", "grill me", or "stress test this plan". Workflow: requirement scope analysis → real codebase research (code is ground truth · pull latest · read-only server verification when needed) → grill/clarification gate (walk the design tree branch-by-branch, escalate only genuine ambiguities code can't answer) → collaborative DD plan authoring → 1–3 review agents based on risk level → main flow handles review findings → confirmation gate → hand off to autopilot for development. Solves four high-frequency problems: "forgot to create a branch/worktree", "assumed code behavior from training data", "silently picked one of several viable options without aligning with the human", and "coded before plan was reviewed and confirmed".
+version: 2.1.0
 ---
 
 # /feat — Feature Development Planning Phase (Research → Plan → Review → Confirm)
@@ -17,7 +17,7 @@ Core belief: **Code is ground truth.** Every plan conclusion must be grounded in
 
 | Phase | Owner | Artifact |
 |-------|-------|----------|
-| Requirement scope analysis → code research → DD plan → plan review → confirmation | **feat (this skill)** | Reviewed and confirmed DD (inside requirement subfolder) |
+| Requirement scope analysis → code research → grill/clarification → DD plan → plan review → confirmation | **feat (this skill)** | Reviewed and confirmed DD (inside requirement subfolder) |
 | Batch development → code review → fixes → archiving + acceptance | **autopilot** | Code + acceptance documents |
 
 feat ends = DD confirmed by a human; autopilot naturally follows.
@@ -125,7 +125,32 @@ Red lines:
 
 ---
 
-## Phase 3: Collaborative Plan Authoring (Write the DD)
+## Phase 3: Collaborative Plan Authoring (Grill → Write the DD)
+
+### 3.1 Grill / Clarification Gate (human-in-the-loop)
+
+After research lands and **before** drafting the DD, walk down each branch of the design tree and grill the user on the genuine ambiguities one-by-one until shared understanding, then fold the conclusions into the DD. Purpose: eliminate "writing a plan on assumptions" and "silently picking one of several viable options without aligning with the human".
+
+Trigger:
+
+| Signal | Grill scope |
+|--------|-------------|
+| Risk **small** and no ambiguity (pure additive/styling/copy) | Skip → go to 3.2 |
+| Risk **medium**, or research surfaced ≥1 unknown / multi-option branch that affects plan direction | **Required** — focus on 2–3 key decision groups |
+| Risk **large** (cross-repo contract / funds·auth·payment / architecture / new dependency) | **Required** — walk the full design tree |
+| User says "grill me" / "stress test this plan" (can trigger standalone on an existing DD/plan) | Enter this step and grill the target branch-by-branch |
+
+Grill ground rules (inherits Phase 2 "code is ground truth"):
+
+- ⛔ **Questions answerable from code / research / read-only server verification must NOT be asked to the user** — go back to Phase 2 and read code / grep / curl. Only escalate what code genuinely can't answer.
+- ✅ Only ask these genuine ambiguities: **product trade-offs** (which behavior/semantics), **priority & scope boundary** (how far this iteration goes), **expected contract of external dependencies** (frontend/contract/PM-side agreements not findable in code), **preference on irreversible decisions** (when the chosen path is hard to roll back).
+- 🌲 **Walk the design tree**: one branch at a time; resolve dependent decisions in dependency order (upstream before the downstream it affects). **Focus on one related group per round** — do not dump 20 questions at once.
+- 🔁 An answer that spawns new branches → keep drilling until that branch converges; an answer that needs code verification → go back to Phase 2 to confirm, then continue.
+- 📝 Record each conclusion immediately as the basis for the DD's **§3 design decisions / §5 decision matrix / ADR** (mark it "aligned with the user", not "AI-chosen").
+
+After the grill converges, proceed to 3.2. **If the grill surfaces a contradiction between the requirement premise and the real code** (interface doesn't exist / architecture conflict / technically infeasible) → go to Exception Handling: stop writing the DD and report with evidence.
+
+### 3.2 Write the DD
 
 Organize into a DD document, placed in the requirement subfolder `{DOCS_ROOT}/{type}/{ID}/{DD|ENH|BUG}.md` (main filename follows `{type}`) + `INDEX.md`. Must include:
 
@@ -136,7 +161,7 @@ Organize into a DD document, placed in the requirement subfolder `{DOCS_ROOT}/{t
 - **§4 Implementation Plan**: broken into Batches (each ≤{MAX_FILES_PER_BATCH} files), ready for autopilot to execute directly
 - **§5 Decision Matrix**: problem/solution matrix with `[severity / trigger scenario / impact scope / ROI]` 4-column format
 
-> If multiple viable options exist and impact spans more than a single file → **list them explicitly for the human to choose**; do not silently pick one.
+> If multiple viable options exist and impact spans more than a single file → **list them explicitly for the human to choose** (this is exactly what the 3.1 grill is meant to surface); do not silently pick one.
 
 ---
 
@@ -202,6 +227,8 @@ After confirmation, hand off to `autopilot` (DD is in the requirement subfolder 
 | Phase 2 research contradicts requirement premise (interface doesn't exist / architecture conflict / technically infeasible) | **Stop writing the DD** — report to user with real code evidence and wait for requirement adjustment (code is ground truth — ground truth can also veto requirements) |
 | Need to write to server/deploy | Stop; operations outside the read-only boundary are handed to the user |
 | Docs conflict with code | Read both sides before asking the user which is authoritative |
+| A grill question is answerable from code | Do not ask the user — go back to Phase 2 and read code / grep / curl |
+| Grill surfaces requirement premise contradicting real code | Stop writing the DD; report with evidence and wait for requirement adjustment (code is ground truth — it can veto requirements) |
 | Plan review determines a redo is needed | Pause, report review conclusions, suggest redesign |
 | User changes requirements mid-flow | Return to Phase 1 to re-analyze scope |
 
@@ -212,10 +239,12 @@ After confirmation, hand off to `autopilot` (DD is in the requirement subfolder 
 1. **Code is ground truth** — conclusions involving other repos/servers must be backed by real code/data; training data assumptions are prohibited
 2. **Pull latest before researching** — check out the correct branch per `{REPO_MAP}`; writing a plan without pulling is a violation
 3. **Server is read-only** — prohibited: write to DB / change config / deploy / restart; private key credentials must not be printed
-4. **Plan review uses independent subagents** — main conversation self-review is prohibited
-5. **No coding before confirmation gate** — only enter autopilot after receiving explicit confirmation
-6. **Let humans choose among multiple viable options** — when impact spans more than a single file and there are real trade-offs, list options explicitly
+4. **Grill only asks what code can't answer** — anything derivable from code / research / read-only server verification must not be asked to the user; only escalate product trade-offs / scope / external contracts / irreversible-decision preferences
+5. **Plan review uses independent subagents** — main conversation self-review is prohibited
+6. **No coding before confirmation gate** — only enter autopilot after receiving explicit confirmation
+7. **Let humans choose among multiple viable options** — when impact spans more than a single file and there are real trade-offs, list options explicitly (surfaced in 3.1 grill, recorded in 3.2 DD)
 
 ---
 
+> v2.1 folds the former standalone `grill-me` skill's relentless-interview method into Phase 3.1 (the standalone `grill-me/` remains in this library for non-feat use).
 > To migrate to a new project: see `SETUP.md` in the same directory.

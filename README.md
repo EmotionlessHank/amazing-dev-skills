@@ -107,7 +107,7 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 
 | Skill | Description |
 |-------|-------------|
-| [agent-handoff](./agent-handoff) | Agent-to-agent collaboration protocol via self-describing zip packages. Two Claude Code instances (on separate machines) hand off work through a zip containing INSTRUCTIONS.md + manifest.json — human action reduced to "forward the zip in IM." Includes security gate against zip-injection attacks. |
+| [agent-handoff](./agent-handoff) | Agent-to-agent collaboration protocol via self-describing zip packages. Two Claude Code instances (on separate machines) hand off work through a zip containing INSTRUCTIONS.md + manifest.json — human action reduced to "forward the zip in IM." Includes security gate against zip-injection attacks. Lightweight variant: a single self-describing HANDOFF markdown committed into the target repo when both agents share a codebase. |
 | [persona-distill](./persona-distill) | Distills a person's writing corpus (blog posts, transcripts, chat logs) into a layered AI persona engineering file: fact/style/reasoning/knowledge extraction → five-file output (SOUL/PERSONA/LOREBOOK/STATE/EVAL) → holdout-set blind evaluation → iterative refinement. |
 | [video-to-html-pres](./video-to-html-pres) | Converts a video (file or URL) into a mobile-style interactive HTML presentation with synchronized subtitles. Supports multiple visual themes, persists creator→style mappings in `memory/creator-styles.json`, and supports Whisper word-level timestamps. |
 

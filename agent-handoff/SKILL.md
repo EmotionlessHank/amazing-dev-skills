@@ -24,6 +24,8 @@ Canonical example (the origin of this protocol): internal backend mTLS device ce
 | `manifest.json` | ✅ | `protocol` (e.g., `<org>-<task>-request/v1`), task name, requester, date, artifact checklist |
 | Material/result files | As needed | Task-specific; the receipt package = the request package + result files (instructions travel back unchanged, closing the protocol loop) |
 
+> **Lightweight variant (both sides share one repo)**: No zip/manifest needed — the handoff degrades to **a single self-describing markdown doc committed into the target repo** (`docs/HANDOFF-<topic>.md`). The Hard Rules below still apply in full: self-describing / zero-context, no secrets (safe to commit in plaintext), receiver independently validates self-reported claims, absolute paths + reference the **paradigm commit** of any prior fix being copied, explicit acceptance criteria + receipt requirement. Reach for this when two agents already share a codebase; use the zip protocol when they don't.
+
 ## Hard Rules for Designing a New Protocol (Scenario ①)
 
 1. **Self-describing**: The receiving agent can operate with zero prior context — instructions travel with the package. The counterpart's Guide Post has three sections: plain-language three steps (drop document → send zip → drop receipt) + Phase 1 agent instructions + the full INSTRUCTIONS.md template text (which the agent writes verbatim into the package).

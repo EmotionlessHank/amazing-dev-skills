@@ -1,7 +1,7 @@
 ---
 name: autopilot
-description: Fully automated development pipeline after a plan has been confirmed. Triggers when the user confirms a development plan ("confirm"/"OK"/"start"), or says "/autopilot", "auto dev", "run pipeline", or "autopilot". Automatically executes: batch development (with appropriate tests per batch) → 1–3 parallel review agents as needed → main flow auto-handles review findings → archives process/acceptance docs in the requirement subfolder → notifies user for acceptance. Should be invoked proactively when a "plan confirmed, ready to develop" pattern is detected.
-version: 2.0.0
+description: Fully automated development pipeline after a plan has been confirmed. Triggers when the user confirms a development plan ("confirm"/"OK"/"start"), or says "/autopilot", "auto dev", "run pipeline", or "autopilot". Automatically executes: batch development (with appropriate tests per batch) → 1–3 parallel review agents as needed → main flow auto-handles review findings → archives process/acceptance docs in the requirement subfolder → development summary (fixed template, mandatory before acceptance) → notifies user for acceptance. Should be invoked proactively when a "plan confirmed, ready to develop" pattern is detected.
+version: 2.1.0
 ---
 
 # /autopilot — Fully Automated Development Pipeline
@@ -94,7 +94,7 @@ Pipeline:
   Phase 1: Batch development → {N} Batches (with appropriate tests per batch)
   Phase 2: {1-3} parallel review agents as needed → reviews/REV-v1-*.md
   Phase 3: Main flow auto-handles findings (Class-A fix / Class-B → enh-todo-additions)
-  Phase 4: Archive CHANGES/TEST_PLAN/ACCEPTANCE/INDEX → acceptance notification
+  Phase 4: Archive CHANGES/TEST_PLAN/ACCEPTANCE/INDEX → development summary (fixed template) → acceptance notification
 ```
 
 ---
@@ -226,9 +226,49 @@ Append a "Dev Agent Fix Record" to the bottom of each REV: Class A items checked
 3. **Remove worktree**: `git worktree remove` + `git branch -D`
 4. **Follow-ups**: cross-team dependencies or release coordination mentioned casually by the user are logged to the project reminder file
 
-### 4.3 Final Report + Acceptance Notification
+### 4.3 Development Summary (fixed template · mandatory before acceptance)
 
-Output a summary (dev/review/verification stats + doc paths), and **pull 3–6 of the most critical acceptance items from ACCEPTANCE.md and list them directly in the conversation**, with the full checklist path attached. UI changes must include the reminder: "Browser visual acceptance was not automated — please manually verify hover/entrance/edge states."
+**After all development + review + verification is done and before handing over the acceptance checklist, you MUST emit a development summary in the fixed template below** — so the user grasps "what was built / how correctness is guaranteed / what honest caveats remain" before validating. All eight sections required; the **Honest Disclosure section is non-omittable** (forward-compat / currently-unreachable-but-tested / scope-narrowed / deferred items are surfaced, not buried in docs).
+
+```markdown
+# {REQ ID} Dev Summary · {Feature Name}
+
+## One-liner
+{What changed and what it achieves — one line, including the baseline it upgrades from}
+
+## Deliverables
+| Category | Content |
+|---|---|
+| New code | {new files + one-line responsibility} |
+| Changed code | {changed files + change highlights} |
+| Tests | {new case areas + total-test-count delta (e.g. 284→291)} |
+| Docs | {DD status + 3-piece set + REV count + acceptance screenshot} |
+
+## Key Architecture Decisions (with rationale + rejected options)
+1. {decision → why this, what was rejected}
+(2–4 items covering the most informative trade-offs)
+
+## Invariant / Constraint Guards
+- {each project red-line/iron-law + how this change does not violate it}
+
+## Verification Evidence
+- {lint result} · {N}/{suites} tests green · {visual/fidelity gate result/path} · {N}-agent review {verdicts}
+
+## Review Handling
+- {N agents · each verdict} → {what Critical/Major were fixed, where Minor were deferred}
+
+## Honest Disclosure (non-defects)
+- {forward-compat / currently-unreachable-but-tested / scope narrowed to a later requirement / known deferrals — stated proactively, not hidden}
+
+## Status + Next Steps
+- {branch + key commits} · main workspace untouched · merge + push = user's call (give the commands) · acceptance checklist in `ACCEPTANCE.md`
+```
+
+> Template purpose = make the "author/review separation + honest verification (self-verify-first / acceptance triage)" outcomes explicit; **do not** report only "all green, please accept" without explaining decisions and honest caveats. Adapt section labels (iron laws, build/lint commands, fidelity gate) to the project via `SETUP.md` placeholders.
+
+### 4.4 Acceptance Notification
+
+Immediately after the summary, **pull 3–6 of the most critical acceptance items from ACCEPTANCE.md and list them directly in the conversation**, with the full checklist path attached. UI changes must include the reminder: "Visual acceptance was not automated — please manually verify hover/entrance/edge states."
 
 Push/merge to remote is left to the user's discretion.
 

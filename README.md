@@ -39,7 +39,7 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 
 | Skill | Description |
 |-------|-------------|
-| [autopilot](./autopilot) | Fully autonomous development pipeline: batched coding → parallel subagent code review → auto-triage of review findings → delivery docs + handoff to human QA. Multi-project template with placeholder substitution. |
+| [autopilot](./autopilot) | Fully autonomous development pipeline: batched coding → parallel subagent code review → auto-triage of review findings → delivery docs → development summary (fixed template, mandatory before acceptance) → handoff to human QA. Multi-project template with placeholder substitution. |
 | [feat](./feat) | Feature planning lifecycle (pairs with autopilot): scope analysis → real codebase research → grill/clarification gate (design-tree interview, embeds `grill-me`) → DD/spec writing → 1–3 agent plan review → confirmation gate → handoff to autopilot. |
 | [worktree-dev](./worktree-dev) | Enforces git worktree isolation for every development session: branch creation, env symlinks, directory lock, pre-batch read lists, and agent delegation constraints. |
 | [parallel-worktree](./parallel-worktree) | Orchestrates parallel worktree development across multiple agents: task decomposition, file-ownership conflict detection, focused context injection, and merge guidance. Includes Anthropic CCC pattern reference. |

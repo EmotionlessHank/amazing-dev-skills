@@ -35,7 +35,8 @@ List all files in this project that "exist in the main workspace, are gitignored
 | `.claude/skills/` | Workflow skill resources (symlinked for sharing, not copied) | Personal skills unavailable |
 
 > When switching projects: list every gitignored but worktree-required file in your project. Symlinks are not `cp` (a copy is a static snapshot; changes to the main workspace won't be seen by the worktree).
-> ⚠️ Symlink relative path depth = `{WORKTREE_BASE}` nesting levels + file levels — verify the number of `../` in each `ln -sf` command individually.
+> ⚠️ Symlink relative path depth = `{WORKTREE_BASE}` nesting levels + file levels — verify the number of `../` in each `ln -sf` command individually. Too few `../` → a dangling symlink that points nowhere.
+> ⚠️ **Branch-dependent tracked files**: if any of these files is gitignored on most branches but **committed (tracked) on some branches** (e.g. a `config_prod.*` tracked on a `prod` branch), it comes with the checkout when the worktree branches off there — do **not** symlink over it (that produces a typechange `T` and pollutes the branch). The §1.2 guard (`git ls-files --error-unmatch`) handles this: tracked → skip symlink and edit the real file; gitignored/missing → symlink.
 
 ## Verification
 

@@ -53,9 +53,20 @@ All `{ENV_FILES}` (and personal config such as local permission allowlists) must
 
 ```bash
 # Run from the main workspace root; symlink each env file back to the main workspace
-# (adjust the relative path depth based on {WORKTREE_BASE} nesting level)
+# (adjust the relative path depth based on {WORKTREE_BASE} nesting level — count the ../ carefully)
 ln -sf {relative-path-to-main-workspace}/{ENV_FILE} {WORKTREE_BASE}/<name>/{ENV_FILE}
 ```
+
+> ⚠️ **Symlink depth**: count `../` from the link's *own* directory back to the main workspace root. A link that lands deeper in the tree (e.g. `{WORKTREE_BASE}/<name>/sub/dir/`) needs one `../` per level — getting this wrong produces a **dangling symlink** (points nowhere). `ls -l` each link to confirm it resolves to a real file.
+>
+> ⚠️ **Tracked-file guard (critical, branch-dependent)**: some env files are gitignored on *most* branches but **git-tracked real files on others** (e.g. a `config_prod.*` that is committed on a `prod` branch). When the worktree is checked out from such a branch, the file is **already present**; running `ln -sf` over it replaces the real file with a symlink → `git status` shows a typechange (`T`) → the branch is polluted, and some harnesses refuse to write the symlink. **Guard before symlinking**: if the file is tracked, it came with the checkout — skip the symlink and edit the real file directly; only symlink when it is gitignored / missing.
+> ```bash
+> if git -C {WORKTREE_BASE}/<name> ls-files --error-unmatch {ENV_FILE} >/dev/null 2>&1; then
+>   echo "{ENV_FILE} is tracked and came with the checkout — skip symlink, edit the real file"
+> else
+>   ln -sf {relative-path-to-main-workspace}/{ENV_FILE} {WORKTREE_BASE}/<name>/{ENV_FILE}  # only when gitignored/missing
+> fi
+> ```
 
 > **Consequence of missing symlinks**: missing env files often **silently fall back** to a default/wrong environment (no error thrown) — this is the most insidious pitfall. Verify each symlink points to a valid file. See `SETUP.md` for the specific `{ENV_FILES}` list and the consequence of each missing file.
 

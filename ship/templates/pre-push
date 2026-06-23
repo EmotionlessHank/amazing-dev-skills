@@ -1,0 +1,37 @@
+#!/bin/sh
+# Local CI gate (replaces paid cloud CI). Runs the CI-equivalent chain before every push;
+# any red blocks the push. Bypass only via `git push --no-verify` (discouraged — for genuine
+# hook false-positives only).
+
+ROOT=$(git rev-parse --show-toplevel) || exit 1
+cd "$ROOT" || exit 1
+
+echo "▶︎ pre-push local CI gate…"
+
+# 1. Required tools present?
+for tool in {TOOLS}; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "✘ missing tool: $tool — push blocked"; exit 1
+  fi
+done
+
+# 2. CI-equivalent chain — REPLACE the {CI_CHAIN} block below with your real commands.
+#    Each step MUST exit non-zero on failure so the gate blocks the push.
+#
+# ── Example (Node / web):
+#   pnpm lint --silent      || { echo "✘ lint — push blocked"; exit 1; }
+#   pnpm type-check         || { echo "✘ type-check — push blocked"; exit 1; }
+#   pnpm test --run         || { echo "✘ tests — push blocked"; exit 1; }
+#
+# ── Example (iOS):
+#   xcodegen generate >/dev/null || { echo "✘ project gen — push blocked"; exit 1; }
+#   swiftlint --strict --quiet   || { echo "✘ SwiftLint — push blocked"; exit 1; }
+#   DEVICE=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+( Pro( Max)?)?' | head -1)
+#   xcodebuild test -scheme YourScheme -destination "platform=iOS Simulator,name=$DEVICE" \
+#       CODE_SIGNING_ALLOWED=NO >/tmp/prepush-test.log 2>&1 \
+#       || { echo "✘ build/test — push blocked"; tail -15 /tmp/prepush-test.log; exit 1; }
+
+{CI_CHAIN}
+
+echo "✓ local CI gate passed — push allowed"
+exit 0

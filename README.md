@@ -72,6 +72,7 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 |-------|-------------|
 | [sentry](./sentry) | Two-mode Sentry integration: **bulk patrol** (fetch unresolved Fatal/Error issues via API, filter by threshold, generate regression test skeletons) and **single-issue diagnosis** (URL → root-cause decision tree → source trace → fix verification). |
 | [vercel-build-doctor](./vercel-build-doctor) | Diagnoses and fixes Vercel build failures directly from the Vercel API — no browser scraping, no local reproduction. Triggers on "build failed / deploy error" keywords. |
+| [ship](./ship) | Local-CI-gate-then-push: when paid cloud CI is off, a local `pre-push` git hook becomes the single gate (lint → build → test). Standard "green-then-push" front door — gate self-heal (fresh-clone install), guard green, `gh` multi-account-aware push, switch back. Never `--no-verify`. Includes pre-push hook + installer templates. |
 
 ### Reporting & Productivity
 

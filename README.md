@@ -55,6 +55,9 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 | [ui-design-plan](./ui-design-plan) | Transforms a vague "design the UI" request into a structured DAG execution plan: reads PRD, builds a competitor analysis matrix, audits reusable design system assets, and assembles a full design pipeline. |
 | [ui-walkthrough](./ui-walkthrough) | Generates a structured UI walkthrough document for a feature, covering user flows, component breakdown, interaction states, and edge cases. |
 | [grill-me](./grill-me) | Relentlessly interviews you about a plan or design until every branch of the decision tree is resolved. Use it to stress-test ideas before committing to implementation. (Also embedded as Phase 3.1 of `feat` — use this standalone for non-feat plans.) |
+| [domain-modeling](./domain-modeling) | Builds and sharpens the project's domain model and ubiquitous language during design: challenges vague/conflicting terms, stress-tests with scenarios, cross-references real code, maintains a single glossary doc, and records hard decisions as ADRs inside the plan doc. Adapted from mattpocock/skills (MIT). |
+| [codebase-design](./codebase-design) | Shared design vocabulary for deep-module thinking — interface depth, seams, adapters, leverage, locality, testability. Use during code research/design to establish a common language before writing the plan's design section. Adapted from mattpocock/skills (MIT). |
+| [prototype](./prototype) | Writes throwaway prototype code to answer a single design question (state/logic vs API shape), builds the smallest runnable artifact in a scratch dir, extracts the answer back into the plan doc, then deletes it. Adapted from mattpocock/skills (MIT). |
 
 ### UI Implementation & Design Fidelity
 
@@ -74,6 +77,8 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 | [sentry](./sentry) | Two-mode Sentry integration: **bulk patrol** (fetch unresolved Fatal/Error issues via API, filter by threshold, generate regression test skeletons) and **single-issue diagnosis** (URL → root-cause decision tree → source trace → fix verification). |
 | [vercel-build-doctor](./vercel-build-doctor) | Diagnoses and fixes Vercel build failures directly from the Vercel API — no browser scraping, no local reproduction. Triggers on "build failed / deploy error" keywords. |
 | [ship](./ship) | Local-CI-gate-then-push: when paid cloud CI is off, a local `pre-push` git hook becomes the single gate (lint → build → test). Standard "green-then-push" front door — gate self-heal (fresh-clone install), guard green, `gh` multi-account-aware push, switch back. Never `--no-verify`. Includes pre-push hook + installer templates. |
+| [tdd](./tdd) | Test-driven development discipline: vertical-slice tracer-bullet RED→GREEN→refactor (one test, one implementation, repeat) over horizontal "all tests first"; asserts external behavior, never refactors on red. Standalone or called from autopilot's per-batch execution. Adapted from mattpocock/skills (MIT). |
+| [diagnosing-bugs](./diagnosing-bugs) | Six-phase discipline for hard bugs and performance regressions: tight reproducible feedback loop → reproduce + minimize → falsifiable hypotheses → single-variable instrumentation → regression test before fix → cleanup + lessons backfill. Adapted from mattpocock/skills (MIT). |
 
 ### Reporting & Productivity
 

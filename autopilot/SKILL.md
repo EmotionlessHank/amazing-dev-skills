@@ -1,7 +1,7 @@
 ---
 name: autopilot
 description: Fully automated development pipeline after a plan has been confirmed. Triggers when the user confirms a development plan ("confirm"/"OK"/"start"), or says "/autopilot", "auto dev", "run pipeline", or "autopilot". Automatically executes: batch development (with appropriate tests per batch) → 1–3 parallel review agents as needed → main flow auto-handles review findings → archives process/acceptance docs in the requirement subfolder → development summary (fixed template, mandatory before acceptance) → notifies user for acceptance. Should be invoked proactively when a "plan confirmed, ready to develop" pattern is detected.
-version: 2.1.0
+version: 2.2.0
 ---
 
 # /autopilot — Fully Automated Development Pipeline
@@ -107,7 +107,7 @@ Extract batches from the implementation plan. Each batch: **≤ {MAX_FILES_PER_B
 
 ### 1.2 Single Batch Execution
 
-**Step 1 — Code**: Implement per plan design, follow project code conventions, apply lessons learned to avoid known pitfalls.
+**Step 1 — Code**: Implement per plan design at the **test seam the DD §6 picked** (reuse the highest existing seam; don't invent new ones mid-batch), follow project code conventions, apply lessons learned to avoid known pitfalls. For batches that touch real behavior, prefer a test-driven discipline (RED→GREEN→refactor, one tracer-bullet slice at a time; see the `tdd` skill) over write-code-then-test.
 **Step 1.5 — Design-driven (UI tasks only)**: Use `{DESIGN_IMPL_SKILL}` workflow to fetch design data → code to exact values → per-component visual acceptance; subagent delegates must include design node IDs.
 
 **Step 2 — Appropriate test verification (required per batch)** — not just type checks; run tests matching this batch's change nature:
@@ -126,7 +126,7 @@ Extract batches from the implementation plan. Each batch: **≤ {MAX_FILES_PER_B
 | Type contracts / API layer | Affected integration tests |
 | Pure styling / copy | Skip unit tests, mark `visual-fix`/`copy-fix`, type check only |
 
-No corresponding tests but changed core logic → write a failing test (red) first then fix (green), or explicitly mark "pre-existing gap, log to enh-todo". Type/test failures → **fix immediately**, do not proceed to the next batch.
+No corresponding tests but changed core logic → write a failing test (red) first then fix (green) per the `tdd` skill (assert **external behavior**, not implementation), or explicitly mark "pre-existing gap, log to enh-todo". Type/test failures → **fix immediately**, do not proceed to the next batch.
 
 **Step 3 — Commit**: `git commit`, message follows project language conventions, no AI attribution.
 **Step 4 — Batch announcement**: List changed files + verification results + commit.

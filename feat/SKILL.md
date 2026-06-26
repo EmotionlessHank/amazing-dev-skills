@@ -1,7 +1,7 @@
 ---
 name: feat
 description: Full lifecycle for the "planning phase" of feature development. Triggers when the user says "/feat", "develop feature", "add feature", "implement XX feature", "write a plan", "write DD", "grill me", or "stress test this plan". Workflow: requirement scope analysis → real codebase research (code is ground truth · pull latest · read-only server verification when needed) → grill/clarification gate (walk the design tree branch-by-branch, escalate only genuine ambiguities code can't answer) → collaborative DD plan authoring → 1–3 review agents based on risk level → main flow handles review findings → confirmation gate → hand off to autopilot for development. Solves four high-frequency problems: "forgot to create a branch/worktree", "assumed code behavior from training data", "silently picked one of several viable options without aligning with the human", and "coded before plan was reviewed and confirmed".
-version: 2.1.0
+version: 2.2.0
 ---
 
 # /feat — Feature Development Planning Phase (Research → Plan → Review → Confirm)
@@ -145,6 +145,7 @@ Grill ground rules (inherits Phase 2 "code is ground truth"):
 - ⛔ **Questions answerable from code / research / read-only server verification must NOT be asked to the user** — go back to Phase 2 and read code / grep / curl. Only escalate what code genuinely can't answer.
 - ✅ Only ask these genuine ambiguities: **product trade-offs** (which behavior/semantics), **priority & scope boundary** (how far this iteration goes), **expected contract of external dependencies** (frontend/contract/PM-side agreements not findable in code), **preference on irreversible decisions** (when the chosen path is hard to roll back).
 - 🌲 **Walk the design tree**: one branch at a time; resolve dependent decisions in dependency order (upstream before the downstream it affects). **Focus on one related group per round** — do not dump 20 questions at once.
+- 💡 **Every question carries your recommended answer + one-line rationale** — so the user confirms/redirects instead of starting from a blank page. Ask one at a time and wait for feedback before the next (avoids confusion; keeps the branch ordered).
 - 🔁 An answer that spawns new branches → keep drilling until that branch converges; an answer that needs code verification → go back to Phase 2 to confirm, then continue.
 - 📝 Record each conclusion immediately as the basis for the DD's **§3 design decisions / §5 decision matrix / ADR** (mark it "aligned with the user", not "AI-chosen").
 
@@ -160,6 +161,8 @@ Organize into a DD document, placed in the requirement subfolder `{DOCS_ROOT}/{t
 - **§3 Plan Design**: components/data flow/key decisions (including alternatives considered + rationale for rejection); multiple viable options with real trade-offs and hard-to-reverse consequences → extract as an ADR
 - **§4 Implementation Plan**: broken into Batches (each ≤{MAX_FILES_PER_BATCH} files), ready for autopilot to execute directly
 - **§5 Decision Matrix**: problem/solution matrix with `[severity / trigger scenario / impact scope / ROI]` 4-column format
+- **§6 Testing Decisions**: which modules need tests + what behavior to assert (test **external behavior**, not implementation); **reuse the highest existing seam** before inventing a new one (one seam is ideal — minimizes cross-module test points); name reference test patterns already in the repo. Maps to autopilot's per-batch tests + the project quality gate.
+- **§7 Out of Scope**: explicitly list what this iteration does **not** address — the anti-scope-creep fence; anything deferred here is the boundary autopilot must not silently cross.
 
 > If multiple viable options exist and impact spans more than a single file → **list them explicitly for the human to choose** (this is exactly what the 3.1 grill is meant to surface); do not silently pick one.
 
@@ -247,4 +250,5 @@ After confirmation, hand off to `autopilot` (DD is in the requirement subfolder 
 ---
 
 > v2.1 folds the former standalone `grill-me` skill's relentless-interview method into Phase 3.1 (the standalone `grill-me/` remains in this library for non-feat use).
+> v2.2 folds methodology from [mattpocock/skills](https://github.com/mattpocock/skills) (MIT): `grilling` (per-question recommended answer, one-at-a-time) into Phase 3.1, and `to-prd` (Testing Decisions / test-seam reuse + explicit Out-of-Scope fence) into the Phase 3.2 DD template.
 > To migrate to a new project: see `SETUP.md` in the same directory.

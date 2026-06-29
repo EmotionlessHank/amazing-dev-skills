@@ -89,6 +89,7 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 | [daily-todo](./daily-todo) | Daily task management: parse natural-language plans into structured todos, write to `.progress/REMINDERS.md`, sync to macOS Reminders.app, auto-archive completed items by month. |
 | [today-summary](./today-summary) | Quick end-of-day summary: surfaces what was shipped, what's pending, and what's blocked. |
 | [project-rules-initialization](./project-rules-initialization) | Initializes a project's AI rules infrastructure: generates common rules, syncs agent rules, sets up multi-agent workflow files, and creates the standard `.progress/` directory structure. |
+| [startup-idea-research](./startup-idea-research) | Standardized startup-idea research pipeline: multi-domain trend mining (pain points) → idea distillation → three-axis scoring → **mandatory first-hand competitive audit that deflates fake blue-ocean scores** → ranked matrix + summary + market sizing, archived by dated batch. Born from a real misjudgment (5 "green-light" ideas all downgraded after audit); the audit gate is baked in so it can't recur. |
 
 ### Finance & Personal
 

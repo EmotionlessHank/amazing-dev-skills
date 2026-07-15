@@ -64,7 +64,7 @@ Enable it in a project via `.claude/settings.json`:
 }
 ```
 
-Or interactively: `/plugin marketplace add EmotionlessHank/amazing-dev-skills` then `/plugin` to enable `hank-dev`.
+Or interactively: `/plugin marketplace add EmotionlessHank/amazing-dev-skills` (this only registers the marketplace, it does not enable the plugin), then `/plugin` to actually toggle `hank-dev` on, then `/reload-plugins`.
 
 For the update workflow, how to add a new skill to the plugin, and the verification checklist, see [`plugins/hank-dev/README.md`](./plugins/hank-dev/README.md).
 

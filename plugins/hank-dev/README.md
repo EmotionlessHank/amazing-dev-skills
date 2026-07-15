@@ -18,7 +18,7 @@
 
 ## 在新项目里安装
 
-写入目标项目的 `.claude/settings.json`：
+**方式一，直接写配置文件（推荐，一步到位）**：写入目标项目的 `.claude/settings.json`（或 `.claude/settings.local.json`，只想自己本地生效不想提交进项目仓库就用这个）：
 
 ```jsonc
 {
@@ -33,7 +33,19 @@
 }
 ```
 
-或者交互式操作：进入目标项目后执行 `/plugin marketplace add EmotionlessHank/amazing-dev-skills`，再用 `/plugin` 确认 `hank-dev` 已启用。启用后重启会话（或 `/reload-skills`），确认技能列表里出现 `hank-dev:feat` 等五个技能。
+写完跑 `/reload-plugins`，确认输出里插件数、技能数有增加，就说明生效了。
+
+**方式二，交互式命令（实测跑通的真实步骤，注意中间那个坑）**：
+
+```bash
+/plugin marketplace add EmotionlessHank/amazing-dev-skills   # 只是注册 marketplace，不会自动启用插件！
+/plugin                                                       # 打开插件菜单，手动把 hank-dev 切到 enabled，这一步不能省
+/reload-plugins                                               # 不是 /reload-skills，命令名是 /reload-plugins
+```
+
+**踩过的坑**：`/plugin marketplace add` 执行成功只代表 marketplace 注册上了，`hank-dev` 这个插件默认是**未启用**状态，这时候直接敲 `/hank-dev:feat` 只会得到 "No commands match"。必须在 `/plugin` 菜单里手动启用一次（或者用方式一直接在 settings.json 里写 `enabledPlugins`），再 `/reload-plugins`，技能才会真正出现。
+
+启用成功后，`/reload-plugins` 的输出会报告插件数、技能数等增量（比如 "Reloaded: 4 plugins · 6 skills · ..."），从这个数字变化就能确认 `hank-dev` 真的被吃进去了。技能要用完整的冒号形式触发，比如 `/hank-dev:feat`、`/hank-dev:review`，裸的 `/hank-dev` 不对应任何命令。
 
 ---
 
@@ -77,7 +89,7 @@ git add -A && git commit -m "..." && git push origin main
 2. 编辑 `plugins/hank-dev/.claude-plugin/plugin.json`，在 `skills` 数组里加一行 `"./skills/<new-skill-name>/"`
 3. 在本文件顶部的技能清单表格加一行
 4. commit + push
-5. 找一个已启用 `hank-dev` 的项目跑 `/plugin marketplace update amazing-dev-skills`，重启或 `/reload-skills`，确认新技能出现在列表里，再触发一次验证真的能用
+5. 找一个已启用 `hank-dev` 的项目跑 `/plugin marketplace update amazing-dev-skills`，再 `/reload-plugins`（不是 `/reload-skills`），确认新技能出现在列表里，再触发一次验证真的能用
 
 ---
 
@@ -87,10 +99,11 @@ git add -A && git commit -m "..." && git push origin main
 
 ```bash
 /plugin marketplace update amazing-dev-skills   # 拉最新
-/plugin                                          # 确认 hank-dev 状态是 enabled
+/plugin                                          # 确认 hank-dev 状态是 enabled，不是只注册了 marketplace 没启用
+/reload-plugins                                  # 让改动真正生效，不是 /reload-skills
 ```
 
-判定通过：① `/plugin` 列表里 `hank-dev` 已启用且是最新版本；② 说触发关键词（比如 "hank-dev review 一下这个改动"）能进对应技能的流程；③ 需要占位符的技能（feat/autopilot/worktree-dev）在这个项目要么有本地覆盖版本，要么已经按 `SETUP.md` 替换过占位符。
+判定通过：① `/plugin` 列表里 `hank-dev` 明确显示 enabled（只跑过 `marketplace add` 但没手动启用过的话，这里会是灰的/未启用，容易误以为已经装好）；② `/reload-plugins` 的输出里插件数/技能数有相应增量；③ 用完整冒号形式（如 `/hank-dev:review`）或触发关键词能进对应技能的流程，裸的 `/hank-dev` 不会有反应属于正常；④ 需要占位符的技能（feat/autopilot/worktree-dev）在这个项目要么有本地覆盖版本，要么已经按 `SETUP.md` 替换过占位符。
 
 ---
 

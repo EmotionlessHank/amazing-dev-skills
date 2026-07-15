@@ -1,0 +1,12 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "amazing-dev-skills",
+  "owner": { "name": "Hank", "email": "zggdszft@gmail.com" },
+  "plugins": [
+    {
+      "name": "hank-dev",
+      "source": "./plugins/hank-dev",
+      "description": "Hank's personal dev plugin: feat/autopilot/worktree-dev pipeline + resume-tailor + multi-agent review"
+    }
+  ]
+}

@@ -26,10 +26,47 @@ Each skill lives in its own directory with a `SKILL.md` (the prompt Claude loads
 3. Trigger the skill in Claude Code using the keywords listed in each `SKILL.md`
 
 ```bash
-# Example: copy the autopilot skill into your project
-cp -r amazing-dev-skills/autopilot .claude/skills/
-# Then edit .claude/skills/autopilot/SKILL.md — replace {placeholders} per SETUP.md
+# Example: copy a standalone skill into your project
+cp -r amazing-dev-skills/patch-audit .claude/skills/
+# Then edit .claude/skills/patch-audit/SKILL.md if it has {placeholders} per SETUP.md
 ```
+
+`feat` / `autopilot` / `worktree-dev` / `resume-tailor` / `review` are no longer *standalone* copy-paste folders at the repo root. They ship via the **`hank-dev` plugin** (see below); a project that needs `{placeholder}` substitution for the first three still creates a local `.claude/skills/<name>/SKILL.md` override, same copy-paste-then-edit motion as before, just scoped to a project-level override instead of a repo-root folder.
+
+---
+
+## hank-dev Plugin
+
+This repo doubles as a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`). The `hank-dev` plugin bundles the personal dev pipeline plus career/review tooling, invoked as `hank-dev:<skill>`:
+
+| Skill | Invocation | Description |
+|-------|------------|-------------|
+| [feat](./plugins/hank-dev/skills/feat) | `/hank-dev:feat` | Feature planning lifecycle: scope analysis → real codebase research → grill/clarification gate → DD/spec writing → 1–3 agent plan review → confirmation gate → handoff to autopilot. |
+| [autopilot](./plugins/hank-dev/skills/autopilot) | `/hank-dev:autopilot` | Fully autonomous development pipeline: batched coding → parallel subagent code review → auto-triage of findings → delivery docs → development summary → handoff to human QA. |
+| [worktree-dev](./plugins/hank-dev/skills/worktree-dev) | `/hank-dev:worktree-dev` | Enforces git worktree isolation for every development session: branch creation, env symlinks, directory lock, agent delegation constraints. |
+| [resume-tailor](./plugins/hank-dev/skills/resume-tailor) | `/hank-dev:resume-tailor` | Maintains a master CV (bilingual), tailors per-JD CV + cover letter, runs independent ATS-agent (keyword/format) and HR-agent (market competitiveness) reviews, diffs after edits, archives to a JD index. |
+| [review](./plugins/hank-dev/skills/review) | `/hank-dev:review` | Multi-agent review that auto-scales orchestration to diff size: small diffs get one Claude reviewer + one mandatory independent DeepSeek pass; large/cross-module diffs escalate to an `omc /team` multi-dimension review (correctness/security/simplification/test-coverage) with one teammate carrying the DeepSeek delegation subtask, then adversarial verification. |
+
+`feat` / `autopilot` / `worktree-dev` still ship as multi-project templates with `{placeholder}` substitution (see each skill's `SETUP.md`). Because a plugin marketplace serves the **same** file to every project that enables it, a project that has already customized its own copy should keep a project-level override at `.claude/skills/<name>/SKILL.md`, since that local file takes precedence over the plugin's central version (see `MIGRATION-marketplace.md` for the full mechanism).
+
+Enable it in a project via `.claude/settings.json`:
+
+```jsonc
+{
+  "extraKnownMarketplaces": {
+    "amazing-dev-skills": {
+      "source": { "source": "github", "repo": "EmotionlessHank/amazing-dev-skills" }
+    }
+  },
+  "enabledPlugins": {
+    "hank-dev@amazing-dev-skills": true
+  }
+}
+```
+
+Or interactively: `/plugin marketplace add EmotionlessHank/amazing-dev-skills` then `/plugin` to enable `hank-dev`.
+
+For the update workflow, how to add a new skill to the plugin, and the verification checklist, see [`plugins/hank-dev/README.md`](./plugins/hank-dev/README.md).
 
 ---
 
@@ -39,10 +76,7 @@ cp -r amazing-dev-skills/autopilot .claude/skills/
 
 | Skill | Description |
 |-------|-------------|
-| [autopilot](./autopilot) | Fully autonomous development pipeline: batched coding → parallel subagent code review → auto-triage of review findings → delivery docs → development summary (fixed template, mandatory before acceptance) → handoff to human QA. Multi-project template with placeholder substitution. |
-| [feat](./feat) | Feature planning lifecycle (pairs with autopilot): scope analysis → real codebase research → grill/clarification gate (design-tree interview, embeds `grill-me`) → DD/spec writing → 1–3 agent plan review → confirmation gate → handoff to autopilot. |
 | [fullstack](./fullstack) | Full-stack (frontend + backend + e2e) orchestration on the autopilot base — one trigger, auto-loop. Adds what single-repo autopilot lacks: contract-SoT-first gate → 3-track decomposition (FE/BE/E2E, test-driven) + dual-batch mapping → parallel dual-repo dev (integrated gates) → e2e test-driven gate (three-way attribution: FE bug / BE bug / contract drift) → cross-repo reconciliation. Main repo = master design + contract SoT. Multi-project template with placeholder substitution. |
-| [worktree-dev](./worktree-dev) | Enforces git worktree isolation for every development session: branch creation, env symlinks, directory lock, pre-batch read lists, and agent delegation constraints. |
 | [parallel-worktree](./parallel-worktree) | Orchestrates parallel worktree development across multiple agents: task decomposition, file-ownership conflict detection, focused context injection, and merge guidance. Includes Anthropic CCC pattern reference. |
 | [partial-commit](./partial-commit) | Commits only the current session's changes, ignoring parallel-tab modifications — by diffing against a session-start git snapshot. |
 | [patch-audit](./patch-audit) | Detects patch-on-patch anti-patterns in a feature branch (feat → fix → fix → fix…), scores them, and refactors the commit history into a clean implementation. |
@@ -145,9 +179,17 @@ The `description` field contains the trigger phrases Claude Code matches against
 
 ```
 amazing-dev-skills/
-├── autopilot/          # SKILL.md + SETUP.md
-├── feat/               # SKILL.md + SETUP.md
-├── worktree-dev/       # SKILL.md + SETUP.md
+├── .claude-plugin/
+│   └── marketplace.json  # plugin marketplace manifest
+├── plugins/
+│   └── hank-dev/         # personal plugin: hank-dev:<skill>
+│       ├── .claude-plugin/plugin.json
+│       └── skills/
+│           ├── feat/            # SKILL.md + SETUP.md
+│           ├── autopilot/       # SKILL.md + SETUP.md
+│           ├── worktree-dev/    # SKILL.md + SETUP.md
+│           ├── resume-tailor/   # SKILL.md
+│           └── review/          # SKILL.md
 ├── headless-web-deploy/
 │   ├── SKILL.md
 │   └── references/     # Caddyfile, systemd unit, RUNBOOK, token auth templates

@@ -1,0 +1,12 @@
+{
+  "name": "hank-dev",
+  "description": "Personal dev pipeline: feat (plan) -> autopilot (build) -> worktree-dev (isolation), plus resume-tailor and multi-agent review",
+  "author": { "name": "Hank" },
+  "skills": [
+    "./skills/feat/",
+    "./skills/autopilot/",
+    "./skills/worktree-dev/",
+    "./skills/resume-tailor/",
+    "./skills/review/"
+  ]
+}

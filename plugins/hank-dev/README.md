@@ -1,0 +1,102 @@
+# hank-dev 插件
+
+个人开发流水线插件，通过 `hank-dev:<skill>` 方式调用。发布在 amazing-dev-skills 这个 marketplace 仓库里，由本仓库统一管理，其他工作区通过声明这个 marketplace 来加载。
+
+## 技能清单
+
+| 技能 | 调用方式 | 说明 |
+|------|----------|------|
+| feat | `/hank-dev:feat` | 功能规划阶段：需求分析、代码调研、grill 澄清、DD 方案撰写、多代理评审、确认后交给 autopilot |
+| autopilot | `/hank-dev:autopilot` | 方案确认后的全自动开发：分批开发、并行代码评审、交付文档、验收通知 |
+| worktree-dev | `/hank-dev:worktree-dev` | 强制 worktree 隔离开发：建分支、建 worktree、同步环境、锁定工作目录 |
+| resume-tailor | `/hank-dev:resume-tailor` | 简历/JD 定制流程：master CV 打磨、按 JD 定制、ATS/HR 双代理独立审查、diff 复核、归档 |
+| review | `/hank-dev:review` | 多代理 review：按 diff 规模自动判定单代理还是 team 编排，强制含一次独立 DeepSeek 复核 |
+
+`feat` / `autopilot` / `worktree-dev` 仍带 `{placeholder}`，是多项目模板，需要按各自的 `SETUP.md` 在项目侧覆盖定制内容（见下面「关于模板占位符」）。
+
+---
+
+## 在新项目里安装
+
+写入目标项目的 `.claude/settings.json`：
+
+```jsonc
+{
+  "extraKnownMarketplaces": {
+    "amazing-dev-skills": {
+      "source": { "source": "github", "repo": "EmotionlessHank/amazing-dev-skills" }
+    }
+  },
+  "enabledPlugins": {
+    "hank-dev@amazing-dev-skills": true
+  }
+}
+```
+
+或者交互式操作：进入目标项目后执行 `/plugin marketplace add EmotionlessHank/amazing-dev-skills`，再用 `/plugin` 确认 `hank-dev` 已启用。启用后重启会话（或 `/reload-skills`），确认技能列表里出现 `hank-dev:feat` 等五个技能。
+
+---
+
+## 关于模板占位符
+
+`feat` / `autopilot` / `worktree-dev` 发的是通用模板，`{placeholder}` 不会自动替换，插件缓存里的文件也没法直接改。如果某个项目已经有本地定制版（比如 oddfi-backend、health-ai-agent 之前手工替换过占位符的版本），继续在该项目 `.claude/skills/feat/SKILL.md`（同名同路径）保留本地版本即可，项目级同名 skill 会覆盖插件里的中心版本，两者互不冲突。
+
+全新项目、还没有本地定制版的，插件启用后拿到的是带 `{placeholder}` 的原始模板，不能直接用。要替换占位符，必须在该项目里新建 `.claude/skills/<name>/SKILL.md`（复制插件里对应技能的 `SKILL.md` 内容过去），照 `SETUP.md` 的替换表填好占位符，这份项目级文件才会覆盖插件里的中心版本生效；不要以为改一下就能就地生效。
+
+`resume-tailor` 和 `review` 没有占位符，是通用即用版本。
+
+---
+
+## 增量更新流程
+
+在这个仓库里改一个技能，改完直接影响所有启用了 `hank-dev` 的项目，不需要逐项目改代码：
+
+```bash
+cd /Users/hang/work/amazing-dev-skills
+# 编辑 plugins/hank-dev/skills/<name>/SKILL.md
+git add -A && git commit -m "..." && git push origin main
+```
+
+各项目侧拿更新：
+
+```bash
+/plugin marketplace update amazing-dev-skills
+```
+
+`marketplace.json` 和 `plugin.json` 都不设 `version` 字段，每一次 commit 即视为最新版本，不需要手动 bump 版本号。
+
+---
+
+## 新增一个技能到插件里
+
+**关键点：Claude Code 不会自动扫描 `skills/` 目录，必须手动把新技能路径加进 `plugin.json` 的 `skills` 数组，否则技能不会被加载。**（这是本插件搭建时踩过的一个坑：第一版 `plugin.json` 忘了写 `skills` 数组，五个技能一个都不会生效。）
+
+步骤：
+
+1. 建目录 `plugins/hank-dev/skills/<new-skill-name>/SKILL.md`（多项目模板另加 `SETUP.md`）
+2. 编辑 `plugins/hank-dev/.claude-plugin/plugin.json`，在 `skills` 数组里加一行 `"./skills/<new-skill-name>/"`
+3. 在本文件顶部的技能清单表格加一行
+4. commit + push
+5. 找一个已启用 `hank-dev` 的项目跑 `/plugin marketplace update amazing-dev-skills`，重启或 `/reload-skills`，确认新技能出现在列表里，再触发一次验证真的能用
+
+---
+
+## 验证清单
+
+新增/修改技能后，在任意一个已启用 `hank-dev` 的项目里过一遍：
+
+```bash
+/plugin marketplace update amazing-dev-skills   # 拉最新
+/plugin                                          # 确认 hank-dev 状态是 enabled
+```
+
+判定通过：① `/plugin` 列表里 `hank-dev` 已启用且是最新版本；② 说触发关键词（比如 "hank-dev review 一下这个改动"）能进对应技能的流程；③ 需要占位符的技能（feat/autopilot/worktree-dev）在这个项目要么有本地覆盖版本，要么已经按 `SETUP.md` 替换过占位符。
+
+---
+
+## 回滚
+
+- 项目侧：删 `.claude/settings.json` 里 `enabledPlugins` 对应项，技能即下线。
+- 中心侧：`git revert` 对应 commit，各项目下次 `marketplace update` 自动回退。
+
+更底层的 marketplace 迁移背景见仓库根目录的 `MIGRATION-marketplace.md`。

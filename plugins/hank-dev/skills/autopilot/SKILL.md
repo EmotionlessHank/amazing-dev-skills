@@ -1,7 +1,7 @@
 ---
 name: autopilot
 description: Fully automated development pipeline after a plan has been confirmed. Triggers when the user confirms a development plan ("confirm"/"OK"/"start"), or says "/autopilot", "auto dev", "run pipeline", or "autopilot". Automatically executes: batch development (with appropriate tests per batch) → 1–3 parallel review agents as needed → main flow auto-handles review findings → archives process/acceptance docs in the requirement subfolder → development summary (fixed template, mandatory before acceptance) → notifies user for acceptance. Should be invoked proactively when a "plan confirmed, ready to develop" pattern is detected.
-version: 2.2.0
+version: 2.3.0
 ---
 
 # /autopilot — Fully Automated Development Pipeline
@@ -226,49 +226,53 @@ Append a "Dev Agent Fix Record" to the bottom of each REV: Class A items checked
 3. **Remove worktree**: `git worktree remove` + `git branch -D`
 4. **Follow-ups**: cross-team dependencies or release coordination mentioned casually by the user are logged to the project reminder file
 
-### 4.3 Development Summary (fixed template · mandatory before acceptance)
+### 4.3 Development Summary (fixed template · mandatory before acceptance · always Chinese)
 
-**After all development + review + verification is done and before handing over the acceptance checklist, you MUST emit a development summary in the fixed template below** — so the user grasps "what was built / how correctness is guaranteed / what honest caveats remain" before validating. All eight sections required; the **Honest Disclosure section is non-omittable** (forward-compat / currently-unreachable-but-tested / scope-narrowed / deferred items are surfaced, not buried in docs).
+**After all development + review + verification is done and before handing over the acceptance checklist, you MUST emit a development summary in the fixed Chinese template below**, so the user grasps "what was built / how correctness is guaranteed / what honest caveats remain" before validating.
+
+**Report language: always Simplified Chinese**, independent of `{PROJECT_CONVENTIONS}` (which governs code comments/commit messages/runtime output for the target project, not this completion report). This plugin is authored for a Chinese-narrating workflow; the eight section headers below are fixed Chinese text, not a placeholder to translate. Exception: if the target project's own `CLAUDE.md` explicitly mandates a different report language, that takes precedence.
+
+All eight sections required; the **诚实披露 (Honest Disclosure) section is non-omittable** (forward-compat / currently-unreachable-but-tested / scope-narrowed / deferred items are surfaced, not buried in docs). Follow the project's own dash/punctuation conventions if any (e.g. no em-dash) when filling in the placeholders.
 
 ```markdown
-# {REQ ID} Dev Summary · {Feature Name}
+# {需求编号} 开发总结 · {功能名称}
 
-## One-liner
-{What changed and what it achieves — one line, including the baseline it upgrades from}
+## 一句话
+{改动了什么、达成了什么效果，一句话说清楚，包含这是在什么基础上的升级}
 
-## Deliverables
-| Category | Content |
+## 交付物
+| 类别 | 内容 |
 |---|---|
-| New code | {new files + one-line responsibility} |
-| Changed code | {changed files + change highlights} |
-| Tests | {new case areas + total-test-count delta (e.g. 284→291)} |
-| Docs | {DD status + 3-piece set + REV count + acceptance screenshot} |
+| 新增代码 | {新文件 + 一句话职责} |
+| 改动代码 | {改动文件 + 改动要点} |
+| 测试 | {新增用例覆盖范围 + 测试总数变化（如 284 → 291）} |
+| 文档 | {DD 状态 + 三件套 + REV 份数 + 验收截图} |
 
-## Key Architecture Decisions (with rationale + rejected options)
-1. {decision → why this, what was rejected}
-(2–4 items covering the most informative trade-offs)
+## 关键架构决策（含理由 + 拒绝方案）
+1. {决策 → 为什么选这个、拒绝了什么方案}
+（2-4 条，覆盖信息量最大的权衡取舍）
 
-## Invariant / Constraint Guards
-- {each project red-line/iron-law + how this change does not violate it}
+## 不变量 / 约束守护
+- {项目每条红线/铁律 + 本次改动如何没有违反它}
 
-## Verification Evidence
-- {lint result} · {N}/{suites} tests green · {visual/fidelity gate result/path} · {N}-agent review {verdicts}
+## 验证证据
+- {lint 结果} · {N}/{总数} 测试通过 · {视觉/保真门禁结果/路径} · {N} 代理 review {裁决}
 
-## Review Handling
-- {N agents · each verdict} → {what Critical/Major were fixed, where Minor were deferred}
+## Review 处理
+- {N 个代理 · 各自裁决} → {Critical/Major 如何修复，Minor 延后到哪里}
 
-## Honest Disclosure (non-defects)
-- {forward-compat / currently-unreachable-but-tested / scope narrowed to a later requirement / known deferrals — stated proactively, not hidden}
+## 诚实披露（非缺陷）
+- {前向兼容 / 当前不可达但已测试 / 范围收窄到后续需求 / 已知延后项，主动说明，不藏进文档里}
 
-## Status + Next Steps
-- {branch + key commits} · main workspace untouched · merge + push = user's call (give the commands) · acceptance checklist in `ACCEPTANCE.md`
+## 状态 + 下一步
+- {分支 + 关键 commit} · 主工作区未受影响 · merge/push 由用户决定（给出具体命令）· 验收清单见 `ACCEPTANCE.md`
 ```
 
-> Template purpose = make the "author/review separation + honest verification (self-verify-first / acceptance triage)" outcomes explicit; **do not** report only "all green, please accept" without explaining decisions and honest caveats. Adapt section labels (iron laws, build/lint commands, fidelity gate) to the project via `SETUP.md` placeholders.
+> Template purpose = make the "author/review separation + honest verification (self-verify-first / acceptance triage)" outcomes explicit; **do not** report only "all green, please accept" without explaining decisions and honest caveats. Adapt build/lint commands, fidelity gate names, etc. to the project via `SETUP.md` placeholders, but the **section headers stay in Chinese as written above**; only the `{...}` placeholder content is project-specific.
 
-### 4.4 Acceptance Notification
+### 4.4 Acceptance Notification (Chinese, matching the report)
 
-Immediately after the summary, **pull 3–6 of the most critical acceptance items from ACCEPTANCE.md and list them directly in the conversation**, with the full checklist path attached. UI changes must include the reminder: "Visual acceptance was not automated — please manually verify hover/entrance/edge states."
+Immediately after the summary, **pull 3–6 of the most critical acceptance items from ACCEPTANCE.md and list them directly in the conversation in Chinese**, with the full checklist path attached. UI changes must include this reminder verbatim: "视觉验收未自动化，请人工检查 hover / 入场动效 / 边界状态。"
 
 Push/merge to remote is left to the user's discretion.
 

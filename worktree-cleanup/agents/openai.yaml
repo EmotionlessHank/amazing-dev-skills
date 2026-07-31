@@ -1,0 +1,27 @@
+name: worktree-cleanup
+description: Audit local Git worktrees, generate safety-gated reports, and remove a linked worktree only after the user names one explicit absolute path.
+entrypoints:
+  audit:
+    command:
+      - /usr/bin/python3
+      - ~/.codex/skills/worktree-cleanup/scripts/worktree_cleanup.py
+      - audit
+      - --root
+      - ~/AI
+  audit_telegram:
+    command:
+      - /usr/bin/python3
+      - ~/.codex/skills/worktree-cleanup/scripts/worktree_cleanup.py
+      - audit
+      - --root
+      - ~/AI
+      - --send-telegram
+  cleanup_approved:
+    command:
+      - /usr/bin/python3
+      - ~/.codex/skills/worktree-cleanup/scripts/worktree_cleanup.py
+      - cleanup-approved
+      - --root
+      - ~/AI
+      - --path
+      - "{absolute_path}"

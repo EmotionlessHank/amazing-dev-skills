@@ -1,0 +1,17 @@
+{
+  "name": "hank-dev",
+  "version": "0.2.0",
+  "description": "Personal dev pipeline: feat (plan) -> autopilot (build) -> worktree-dev (isolation), plus resume-tailor and multi-agent review",
+  "author": {
+    "name": "Hank"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Hank Dev",
+    "shortDescription": "Hank 的个人开发与审查工作流。",
+    "longDescription": "提供 feat、autopilot、worktree-dev、resume-tailor 和 review 五个带命名空间的 Codex Skills。",
+    "developerName": "Hank",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "amazing-dev-skills",
+  "interface": { "displayName": "Amazing Dev Skills" },
+  "plugins": [
+    {
+      "name": "hank-dev",
+      "source": { "source": "local", "path": "./plugins/hank-dev" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

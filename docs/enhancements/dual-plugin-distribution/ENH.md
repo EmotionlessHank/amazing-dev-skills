@@ -126,3 +126,13 @@ Git marketplace 验收失败时，删除 Codex Git 安装与 marketplace。现�
 ## 8. 确认记录
 
 用户于 2026-08-04 明确确认：先完成方案，再使用 autopilot 执行，并要求采用业界最佳实践、Codex 官方文档和 Claude 官方文档。
+
+## 9. 计划审查处理记录
+
+计划审查发现 Claude 严格校验失败、版本未升级会阻断缓存更新、回滚流程不完整、直接安装会污染 personal plugin 的风险。
+
+- 已修复三个 skill 的 YAML frontmatter，并为 Claude marketplace 补齐 description。
+- 已实现基于 Git base 的发布版本门禁，并接入 `/Users/hang/work/.worktrees/amazing-dev-skills-dual-plugin-distribution/.githooks/pre-push`。
+- 已将 changelog 放在 `/Users/hang/work/.worktrees/amazing-dev-skills-dual-plugin-distribution/plugins/hank-dev/CHANGELOG.md`，实际发布版本为 0.2.1。
+- 已通过独立名称的临时 Codex marketplace 安装 0.2.0，验证 5 个 skills 与 3 个可执行 scripts 后删除测试 plugin 与 marketplace。`hank-dev@personal` 保持原版本、来源和启用状态。
+- 已补充 Claude 与 Codex 的客户端回滚流程。发布错误只能通过更高 patch 版本修复，不复用或降低版本号。

@@ -1,7 +1,7 @@
 ---
 name: feat
-description: Full lifecycle for the "planning phase" of feature development. Triggers when the user says "/feat", "develop feature", "add feature", "implement XX feature", "write a plan", "write DD", "grill me", or "stress test this plan". Workflow: requirement scope analysis → real codebase research (code is ground truth · pull latest · read-only server verification when needed) → grill/clarification gate (walk the design tree branch-by-branch, escalate only genuine ambiguities code can't answer) → collaborative DD plan authoring → 1–3 review agents based on risk level → main flow handles review findings → confirmation gate → hand off to autopilot for development. Solves four high-frequency problems: "forgot to create a branch/worktree", "assumed code behavior from training data", "silently picked one of several viable options without aligning with the human", and "coded before plan was reviewed and confirmed".
-version: 2.2.0
+description: Full lifecycle for the "planning phase" of feature development. Triggers when the user says "/feat", "develop feature", "add feature", "implement XX feature", "write a plan", "write DD", "grill me", or "stress test this plan". Workflow: requirement scope analysis → real codebase research (code is ground truth · pull latest · read-only server verification when needed) → best-practice research gate (large-risk, no-internal-precedent features only: 3 parallel source-audited agents survey official/real-world/failure-case angles) → grill/clarification gate (walk the design tree branch-by-branch, escalate only genuine ambiguities code can't answer) → collaborative DD plan authoring → 1–3 review agents based on risk level → main flow handles review findings → confirmation gate → hand off to autopilot for development. Solves five high-frequency problems: "forgot to create a branch/worktree", "assumed code behavior from training data", "silently picked one of several viable options without aligning with the human", "coded before plan was reviewed and confirmed", and "reinvented a novel capability from scratch instead of grounding it in audited industry best practice".
+version: 2.3.0
 ---
 
 # /feat — Feature Development Planning Phase (Research → Plan → Review → Confirm)
@@ -17,7 +17,7 @@ Core belief: **Code is ground truth.** Every plan conclusion must be grounded in
 
 | Phase | Owner | Artifact |
 |-------|-------|----------|
-| Requirement scope analysis → code research → grill/clarification → DD plan → plan review → confirmation | **feat (this skill)** | Reviewed and confirmed DD (inside requirement subfolder) |
+| Requirement scope analysis → code research → best-practice research gate (conditional) → grill/clarification → DD plan → plan review → confirmation | **feat (this skill)** | Reviewed and confirmed DD (inside requirement subfolder) |
 | Batch development → code review → fixes → archiving + acceptance | **autopilot** | Code + acceptance documents |
 
 feat ends = DD confirmed by a human; autopilot naturally follows.
@@ -69,7 +69,7 @@ Risk level determination (drives review scale):
 |-------|---------|
 | Small | ≤{SMALL_FILE_THRESHOLD} files, pure additive/styling/copy, single module, no cross-repo |
 | Medium | Single-module feature, 3–5 files, has business logic, depends on existing interfaces |
-| Large | New page / cross-module / architectural decision / new global state / funds·auth·payment / cross-repo contract / new dependency selection |
+| Large | New page / cross-module / architectural decision / new global state / funds·auth·payment / cross-repo contract / new dependency selection / novel capability with no internal precedent within the researched scope (triggers Phase 2R) |
 
 ---
 
@@ -125,11 +125,56 @@ Red lines:
 
 ---
 
+## Phase 2R: Best-Practice Research Gate (conditional — large risk + no internal precedent)
+
+**Not a sub-step of 2.1–2.4** — a separate gate that only fires under narrow conditions, sitting between Phase 2 (internal code research) and Phase 3.1 (grill). Solves the fifth high-frequency problem: reinventing a novel capability from scratch instead of grounding it in audited industry best practice.
+
+### Trigger (all must hold, default is skip when ambiguous)
+
+1. Risk level = **Large** (from Phase 1)
+2. Phase 2 research, scoped to the repos actually investigated so far, confirms no analogous internal pattern exists — do **not** demand an unbounded proof of absence across repos never brought into scope
+3. If "novel vs. an extension of an existing pattern" is genuinely ambiguous → **default to skip**, proceed with the normal flow; the user can always explicitly request a research pass, or explicitly waive one that would otherwise trigger
+
+### Multi-agent fan-out (3 parallel agents, source-audited)
+
+| Agent | Angle | Default focus |
+|-------|-------|----------------|
+| A | Official/authoritative-first | Official docs, standards, the recommended pattern from a well-known framework/spec for this problem |
+| B | Real-world implementation-first | 2–3 real production-grade open-source projects' actual approach (read the implementation, not just marketing copy) |
+| C | Failure-case-first | Known pitfalls, postmortems, "why approach X failed" for this problem domain |
+
+The three angles are a default template, not fixed wording — adapt them if the problem domain genuinely has no clean "official" source.
+
+**Why 3 independent agents instead of 1 agent running a 3-angle checklist**: a single agent that already concluded "the official answer is X" in steps 1–2 tends to soften its own step-3 self-criticism. An independent Agent C, whose entire role is adversarial failure-hunting, surfaces real disagreement instead of self-rationalizing to one answer. This trigger is already narrow (Large + no precedent + not user-waived), so the extra cost of independent agents is acceptable given how rarely it fires.
+
+Each agent applies source-audit rules (same methodology as third-party library verification in 2.4, generalized):
+- Source tiering: official primary source > authoritative media/papers > active community discussion > downweight marketing blogs / self-promotion / mirror-aggregator sites
+- Citing a specific repo as evidence → check maintenance status (archived? time since last commit?) and star-fraud signals (star velocity disproportionate to the author's real reach, single contributor, brand-new account with high stars) → flag explicitly and downweight if hit
+- **Full GitHub-API-level fraud verification only applies once research narrows to a specific candidate repo to actually adopt/install** (hands off to 2.4's existing dependency-selection flow); general "how does the industry solve this" research uses the lighter tiering only — don't API-verify every citation
+
+### Output artifact
+
+`{DOCS_ROOT}/{type}/{ID}/research/best-practice-{ID}.md`, sibling to the existing `reviews/` convention. This becomes evidence for the DD's §2 Research and feeds the §3 alternatives comparison.
+
+### Synthesis — no silent tie-breaking
+
+Main flow (not a 4th agent) organizes the three reports by source tier. **Does not silently pick a winner.** If Agent A (official) and Agent C (failure cases) genuinely point in different directions, that disagreement itself is exactly a "genuine ambiguity code can't resolve" — carry both sides' evidence into Phase 3.1's grill as one decision group, rather than the main flow adjudicating on its own.
+
+### When research is inconclusive
+
+Several viable approaches, each with documented failure cases, none conflicting with the requirement premise → this is **not** a new exception path. It flows through the existing 3.2 rule ("multiple viable options with real trade-offs → list them explicitly for the human to choose"), just now with source-graded evidence attached to each option.
+
+### When research contradicts the requirement premise
+
+Research reveals the requested direction is a known anti-pattern / conflicts with the requirement's premise → handle exactly like the existing "Phase 2 research contradicts requirement premise" row in Exception Handling: stop writing the DD, report with evidence, wait for requirement adjustment.
+
+---
+
 ## Phase 3: Collaborative Plan Authoring (Grill → Write the DD)
 
 ### 3.1 Grill / Clarification Gate (human-in-the-loop)
 
-After research lands and **before** drafting the DD, walk down each branch of the design tree and grill the user on the genuine ambiguities one-by-one until shared understanding, then fold the conclusions into the DD. Purpose: eliminate "writing a plan on assumptions" and "silently picking one of several viable options without aligning with the human".
+After research lands and **before** drafting the DD, walk down each branch of the design tree and grill the user on the genuine ambiguities one-by-one until shared understanding, then fold the conclusions into the DD. Purpose: eliminate "writing a plan on assumptions" and "silently picking one of several viable options without aligning with the human". If Phase 2R ran, its source-graded recommendation (and any real disagreement it surfaced between agents) is one of the inputs behind each question's "recommended answer" below.
 
 Trigger:
 
@@ -251,4 +296,5 @@ After confirmation, hand off to `autopilot` (DD is in the requirement subfolder 
 
 > v2.1 folds the former standalone `grill-me` skill's relentless-interview method into Phase 3.1 (the standalone `grill-me/` remains in this library for non-feat use).
 > v2.2 folds methodology from [mattpocock/skills](https://github.com/mattpocock/skills) (MIT): `grilling` (per-question recommended answer, one-at-a-time) into Phase 3.1, and `to-prd` (Testing Decisions / test-seam reuse + explicit Out-of-Scope fence) into the Phase 3.2 DD template.
+> v2.3 adds Phase 2R (Best-Practice Research Gate): for large-risk features with no internal precedent, 3 parallel source-audited agents (official / real-world implementation / failure-case angles) survey industry best practice before the grill, feeding source-graded evidence into Phase 3.1's recommended answers and the DD's §2/§3 rather than bypassing the grill. Scoped narrowly (large risk + no precedent + not user-waived) so routine feature work is unaffected.
 > To migrate to a new project: see `SETUP.md` in the same directory.

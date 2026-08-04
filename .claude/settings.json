@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "amazing-dev-skills": {
+      "source": { "source": "github", "repo": "EmotionlessHank/amazing-dev-skills" }
+    }
+  },
+  "enabledPlugins": {
+    "hank-dev@amazing-dev-skills": true
+  }
+}

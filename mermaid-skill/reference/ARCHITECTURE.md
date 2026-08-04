@@ -1,4 +1,7 @@
-# Architecture Diagram Syntax
+# Architecture Diagram Syntax / 架构图语法
+
+Architecture-beta reference for cloud and CI/CD layouts, including group/service/junction primitives, icon usage, and edge directions.
+适用于云端架构与 CI/CD 拓扑的 `architecture-beta` 语法参考，覆盖分组、服务、junction 与连线方向。
 
 Architecture diagrams use `architecture-beta` and are well suited for cloud and CI/CD service layouts.
 

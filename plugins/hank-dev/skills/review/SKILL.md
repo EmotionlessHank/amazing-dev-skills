@@ -12,34 +12,34 @@ version: 1.1.0
 
 DeepSeek 复核是外部模型调用。只有用户明确授权本次外发，且待审 patch 通过敏感信息扫描时才执行。缺少授权、扫描阻断、调用失败、超时、输出为空或解析失败时，最终报告必须写明“DeepSeek 复核缺失”和具体原因。
 
-## 审查流程总览
+## 审查流程总览 / Review flow overview
 
 ```mermaid
 flowchart TD
-  accTitle: 多代理代码审查与外发门禁流程
-  accDescr: 从审查范围收集到敏感扫描、独立复核与验收报告的流程
+  accTitle: 多代理代码审查与外发门禁流程 | multi-agent review and outbound gating flow
+  accDescr: 从审查范围收集到敏感扫描、独立复核与验收报告的流程 | from scope collection through sensitive scanning, independent verification, and review report
 
-  A[触发 review 流程] --> B[收集范围、diff 与相关上下文]
-  B --> C{按规模与风险选择审查深度}
-  C --> |轻量| D[单路 Claude 审查]
-  C --> |高风险或跨模块| E[多路风险域审查]
-  D --> F[汇总、去重并标注 Claude 发现]
+  A[触发 review 流程\ntrigger review flow] --> B[收集范围、diff 与相关上下文\ncollect scope, diff, and context]
+  B --> C{按规模与风险选择审查深度\ndecide review depth by scale and risk}
+  C --> |轻量 / light| D[单路 Claude 审查\nsingle-channel Claude review]
+  C --> |高风险或跨模块 / high-risk or cross-module| E[多路风险域审查\nmulti-channel risk-domain review]
+  D --> F[汇总、去重并标注 Claude 发现\naggregate, dedupe, and tag Claude findings]
   E --> F
-  F --> G[敏感扫描与外发前门禁]
-  G --> H{扫描通过且用户授权外发}
-  H --> |是| I[受控 DeepSeek 复核]
-  H --> |否| J[记录复核缺失原因]
-  I --> K{外部结果可解析}
-  K --> |是| L[合并多方发现与证据]
-  K --> |否| J
+  F --> G[敏感扫描与外发前门禁\nsensitive scan and outbound-gate]
+  G --> H{扫描通过且用户授权外发\nscan passed and user authorized outbound review}
+  H --> |是 / yes| I[受控 DeepSeek 复核\ncontrolled DeepSeek verification]
+  H --> |否 / no| J[记录复核缺失原因\nrecord reason for missing review]
+  I --> K{外部结果可解析\nexternal result is parseable}
+  K --> |是 / yes| L[合并多方发现与证据\nmerge findings with evidence from all sources]
+  K --> |否 / no| J
   J --> L
-  L --> M[高风险发现交由 skeptic 验证]
-  M --> N{存在高置信可修复项}
-  N --> |是| O[给出按严重程度排序的修复建议]
-  N --> |否| P[记录待确认项与验证缺口]
-  O --> Q[输出带证据行号的审查报告]
+  L --> M[高风险发现交由 skeptic 验证\nhigh-risk findings to skeptic]
+  M --> N{存在高置信可修复项\nhigh-confidence fixable issue exists}
+  N --> |是 / yes| O[给出按严重程度排序的修复建议\nprovide severity-ordered fixes]
+  N --> |否 / no| P[记录待确认项与验证缺口\nlog open items and validation gaps]
+  O --> Q[输出带证据行号的审查报告\noutput report with evidence line numbers]
   P --> Q
-  Q --> R[验收审查范围、风险层级与外发结论]
+  Q --> R[验收审查范围、风险层级与外发结论\naccept scope, risk tier, and outbound conclusion]
 
   classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
   classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
@@ -50,6 +50,8 @@ flowchart TD
   class B,D,E,F,G,I,L,M,O,P,Q work
   class J risk
 ```
+
+图说明：本图说明 review 从任务触发到高低风险问题汇总并产出结论的执行路径。This diagram maps review execution from trigger to consolidated findings and a final conclusion report.
 
 ## Step 1：规模与风险判定
 

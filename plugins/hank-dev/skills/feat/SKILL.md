@@ -22,35 +22,35 @@ Core belief: **Code is ground truth.** Every plan conclusion must be grounded in
 
 feat ends = DD confirmed by a human; autopilot naturally follows.
 
-## 全流程图（需求到确认再交接 autopilot）
+## 全流程图（需求到确认再交接 autopilot） / End-to-end plan flow from requirement to confirmation and handoff to autopilot
 
 ```mermaid
 flowchart TD
-  accTitle: feat 从需求研究到确认交接的流程
-  accDescr: 以代码事实、风险分层和人工确认控制特性规划的流程
+  accTitle: feat 从需求研究到确认交接的流程 | feat from requirement research to confirmation handoff
+  accDescr: 以代码事实、风险分层和人工确认控制特性规划的流程 | plan flow controlled by code evidence, risk tiers, and human confirmation
 
-  A["启动 /feat\n需求或关键词触发"]
-  A --> B[范围分析与风险分级]
-  B --> C[研读真实代码与相关契约]
-  C --> D{需要运行时真值}
-  D --> |是| E[只读运行时核验]
-  D --> |否| F[汇总代码研究证据]
+  A["/feat 启动\n/feat start\n需求或关键词触发\nkeyword or trigger arrives"]
+  A --> B[范围分析与风险分级\nscope analysis and risk classification]
+  B --> C[研读真实代码与相关契约\nread real code and related contracts]
+  C --> D{需要运行时真值\nneed runtime truth}
+  D --> |是 / yes| E[只读运行时核验\nread-only runtime verification]
+  D --> |否 / no| F[汇总代码研究证据\nsynthesize code research evidence]
   E --> F
-  F --> G{结论与事实矛盾}
-  G --> |是| H[上报矛盾，暂停写 DD]
-  G --> |否| I{大风险且无内部先例}
-  I --> |是| J[三路最佳实践研究]
-  I --> |否| K[进入设计澄清]
+  F --> G{"结论与事实矛盾<br/>conclusion conflicts with fact"}
+  G --> |是 / yes| H[上报矛盾，暂停写 DD\nreport conflict and pause DD]
+  G --> |否 / no| I{"大风险且无内部先例<br/>high risk and no internal precedent"}
+  I --> |是 / yes| J[三路最佳实践研究\nthree-path best-practice research]
+  I --> |否 / no| K[进入设计澄清\nenter design clarification]
   J --> K
-  K --> L[必要时 Grill，随后撰写 DD]
-  L --> M[按风险规模开展计划评审]
-  M --> N{评审结论已收敛}
-  N --> |否| L
-  N --> |是| O[确认门]
-  O --> P{用户确认计划}
-  P --> |反馈| L
-  P --> |确认| Q[交接 DD、研究和评审记录]
-  Q --> R[autopilot 批次开发与代码审查]
+  K --> L[必要时 Grill，随后撰写 DD\ngrill if needed, then draft DD]
+  L --> M[按风险规模开展计划评审\nrun plan review by risk scale]
+  M --> N{"评审结论已收敛<br/>review conclusions converged"}
+  N --> |否 / no| L
+  N --> |是 / yes| O[确认门\nconfirmation gate]
+  O --> P{"用户确认计划<br/>user confirms plan"}
+  P --> |反馈 / revision| L
+  P --> |确认 / confirm| Q[交接 DD、研究和评审记录\nhandoff DD, research, and review records]
+  Q --> R[autopilot 批次开发与代码审查\nautopilot batch development and code review]
 
   classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
   classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
@@ -61,6 +61,8 @@ flowchart TD
   class B,C,E,F,J,K,L,M,Q work
   class H risk
 ```
+
+图说明：本图展示了 feat 从范围分析到用户确认并交接 autopilot 的闭环。This overview shows feat from scope analysis to user confirmation and handoff to autopilot.
 
 ---
 

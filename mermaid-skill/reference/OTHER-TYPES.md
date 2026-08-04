@@ -1,4 +1,7 @@
-# Other Diagram Types
+# Other Diagram Types / 其他图表类型
+
+State diagram, git graph, Gantt, pie, mindmap, and C4 context examples for common Mermaid extensions.
+覆盖状态图、git 图、甘特图、饼图、思维导图与 C4 Context 的常用示例。
 
 ## State Diagram
 

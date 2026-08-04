@@ -1,4 +1,7 @@
-# Flowchart Syntax
+# Flowchart Syntax / 流程图语法
+
+Flowchart quick reference for direction, node shapes, arrow styles, labels, subgraphs, and readable one-line examples.
+流程图语法速览，覆盖方向、节点形状、箭头类型、标签、子图和可读示例。
 
 ## Basic Structure
 

@@ -25,33 +25,33 @@ Simulates a real engineering team: product confirms PRD → engineers implement 
 8. **Never auto-push/merge to remote** — stops at local main branch squash commit; user decides on pushing
 9. **Strictly follow project conventions** — project `{RULES_DIR}` / conventions (Batch ≤N files, lessons-first, worktree default, tiered review fixes) all apply
 
-## 自动化主流程总览
+## 自动化主流程总览 / Automated pipeline summary
 
 ```mermaid
 flowchart TD
-  accTitle: autopilot 批次开发与验收流程
-  accDescr: 从已确认设计输入到批次实现、独立审查和人工验收的自动化流程
+  accTitle: autopilot 批次开发与验收流程 | autopilot batched delivery and acceptance flow
+  accDescr: 从已确认设计输入到批次实现、独立审查和人工验收的自动化流程 | automated flow from confirmed plan to batch implementation, independent review, and human acceptance
 
-  Start([触发 autopilot]) --> Input{是否已确认 DD 输入}
-  Input -->|否| Ask[提示确认计划并补齐输入]
-  Input -->|是| Prepare[定位文档、核对分支、读取约束]
-  Prepare --> Batches[按 DD 执行可验证批次]
-  Batches --> BatchGate{批次验证通过}
-  BatchGate -->|否| BatchFix[修复并重跑当前批次]
+  Start([触发 autopilot\ntrigger autopilot]) --> Input{是否已确认 DD 输入\nis DD input confirmed}
+  Input -->|否 / no| Ask[提示确认计划并补齐输入\nprompt confirmation and complete missing input]
+  Input -->|是 / yes| Prepare[定位文档、核对分支、读取约束\nlocate docs, verify branch, read constraints]
+  Prepare --> Batches[按 DD 执行可验证批次\nexecute validated batches from DD]
+  Batches --> BatchGate{批次验证通过\nbatch validation passed}
+  BatchGate -->|否 / no| BatchFix[修复并重跑当前批次\nfix and rerun this batch]
   BatchFix --> BatchGate
-  BatchGate -->|是| FullGate[全量质量门禁]
-  FullGate --> Quality{全量门禁通过}
-  Quality -->|否| QualityFix[修复并重跑全量门禁]
+  BatchGate -->|是 / yes| FullGate[全量质量门禁\nfull quality gate]
+  FullGate --> Quality{全量门禁通过\nfull gate passed}
+  Quality -->|否 / no| QualityFix[修复并重跑全量门禁\nfix and rerun full gate]
   QualityFix --> FullGate
-  Quality -->|是| Review[按风险派发 1 到 3 路独立审查]
-  Review --> Triage{存在阻断级发现}
-  Triage -->|是| Fix[修复并回归验证]
+  Quality -->|是 / yes| Review[按风险派发 1 到 3 路独立审查\ndispatch 1-3 independent reviews by risk]
+  Review --> Triage{存在阻断级发现\ncritical blockers found}
+  Triage -->|是 / yes| Fix[修复并回归验证\nfix and run regression verification]
   Fix --> Triage
-  Triage -->|否| Docs[归档变更、测试与验收证据]
-  Docs --> Accept[输出总结与人工验收清单]
+  Triage -->|否 / no| Docs[归档变更、测试与验收证据\narchive changes, tests, and acceptance evidence]
+  Docs --> Accept[输出总结与人工验收清单\noutput summary and human acceptance checklist]
   Ask --> Accept
-  Accept --> Done([待用户人工验收完成])
-  Done --> End([关闭本次流程])
+  Accept --> Done([待用户人工验收完成\npending user acceptance])
+  Done --> End([关闭本次流程\nclose this pipeline])
 
   classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
   classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
@@ -62,6 +62,8 @@ flowchart TD
   class Prepare,Batches,FullGate,Review,Fix,Docs,Accept work
   class Ask,BatchFix,QualityFix risk
 ```
+
+图说明：本图说明 autopilot 从确认输入到验收关闭的连续门禁与审查链路。This flow shows autopilot's chained gates, review loop, and acceptance handoff after input confirmation.
 
 ---
 

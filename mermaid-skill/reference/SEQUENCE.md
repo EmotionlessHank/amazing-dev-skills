@@ -1,4 +1,7 @@
-# Sequence Diagram Syntax
+# Sequence Diagram Syntax / 时序图语法
+
+Sequence diagram reference for participants, message arrows, activations, notes, loops, conditionals, and parallel branches.
+时序图语法参考，覆盖参与者、消息箭头、激活框、注释、循环、条件与并行块。
 
 ## Basic Structure
 

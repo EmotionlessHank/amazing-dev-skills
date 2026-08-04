@@ -1,16 +1,16 @@
 ---
 name: mermaid-skill
-description: 使用本地 mmdc 生成、渲染和校验 Mermaid 图表。用户提到 diagram、flowchart、sequence diagram、class diagram、ER diagram、state machine、architecture、visualize、git graph、画图、架构图、流程图或时序图时使用。支持 12 种以上图表类型与视觉复检。
+description: 使用本地 mmdc 生成、渲染和校验 Mermaid 图表。支持 12 种以上图表类型。用户提到 diagram、flowchart、sequence diagram、class diagram、ER diagram、state machine、architecture、visualize、git graph、画图、架构图、流程图或时序图时使用。仅在用户明确授权下使用 Kroki 作为远端兜底。
 metadata: {"openclaw":{"requires":{"bins":["curl"]},"emoji":"📊"}}
----
-
-# Mermaid Diagrams
+# Mermaid Diagrams / Mermaid 图表
+用于本地优先的 Mermaid 图表创建，支持 `mmdc` 直接生成与复检，Kroki 仅作授权远端兜底。
+Use local-first Mermaid generation with `mmdc`, with Kroki only as an opt-in remote fallback.
 
 Generate `.mmd` text files and export to PNG/SVG/PDF using `mmdc` locally. Kroki API is an optional remote fallback that requires the user's explicit approval because it uploads the diagram source.
 
 **Key advantage:** Text-based syntax with **fully automatic layout** — no x/y coordinates needed.
 
-## When to use / when NOT to use
+## When to use / 何时使用
 
 **Use this skill for:** diagrams-as-code with automatic layout (flowchart, sequence, class, state, ER, gantt, mindmap, architecture) — text source that lives in git and embeds in Markdown.
 
@@ -20,9 +20,10 @@ Generate `.mmd` text files and export to PNG/SVG/PDF using `mmdc` locally. Kroki
 - A freeform whiteboard or freehand strokes → **tldraw**.
 - Strict, conventional UML notation → **plantuml**.
 
-## Prerequisites
+## Prerequisites / 前置条件
 
-**Option A: Local (mmdc)** — also needs a headless Chrome (mmdc renders via Puppeteer)
+### Option A: Local (mmdc) / 本地优先
+Also needs a headless Chrome (mmdc renders via Puppeteer)
 ```bash
 npm install -g @mermaid-js/mermaid-cli
 npx puppeteer browsers install chrome-headless-shell   # required — mmdc has no bundled browser
@@ -30,12 +31,12 @@ mmdc --version
 ```
 > `mmdc --version` succeeds even with **no** Chrome installed, but every export then fails with `Could not find Chrome`. Install the browser above (or set `PUPPETEER_EXECUTABLE_PATH` to a system Chrome). If local rendering remains unavailable, request explicit user approval before using Kroki.
 
-**Option B: Kroki API, only after explicit user approval**
+### Option B: Kroki API, only after explicit user approval / 远端补充
 ```bash
 curl --version  # Just need curl
 ```
 
-## Workflow
+## Workflow / 执行流程
 
 1. **Check deps** — `mmdc --version` **and** confirm a headless Chrome is installed (a bare `--version` pass does NOT mean export works); if either is missing, report the local setup gap. Use Kroki only after the user explicitly approves transmitting the diagram source.
 2. **Pick diagram type** — choose from table below
@@ -46,9 +47,10 @@ curl --version  # Just need curl
 7. **Review loop** — show the image to the user, apply the minimal `.mmd` edit per request, re-export until approved (5-round safety valve). See **Review Loop** below.
 8. **Report** — tell user the output file paths
 
-## Validation (Required)
+## Validation (Required) / 必须校验
 
 **NEVER export a diagram without validating first.**
+在本地失败时优先排查 `mmdc` 与 Chrome 环境，不直接把语法问题归因为输入内容。
 
 ```bash
 # Validate with mmdc (local)
@@ -68,7 +70,7 @@ Common validation errors:
 
 > A `Could not find Chrome` (or puppeteer) error from `mmdc` is a **setup** problem, not a diagram error — the `.mmd` may be perfectly valid. Install the browser (see Prerequisites) or validate via Kroki instead of "fixing" correct syntax.
 
-## Self-Check (vision)
+## Self-Check (vision) / 可视化复检
 
 Validation (above) only proves the syntax is legal — it says nothing about whether the **rendered** diagram is readable. After exporting, use the agent's vision capability to read the PNG and catch what automatic layout can't prevent. Mermaid positions everything itself, so the failures here are about content and readability, **not** overlaps:
 
@@ -85,7 +87,7 @@ Validation (above) only proves the syntax is legal — it says nothing about whe
 - **Re-validate (syntax) and re-export after every fix.**
 - If vision is unavailable, skip self-check and show the PNG directly.
 
-## Review Loop
+## Review Loop / 复盘反馈
 
 After self-check, show the exported image and collect feedback. Apply the **minimal `.mmd` edit** for each request, then re-validate and re-export:
 
@@ -100,7 +102,7 @@ After self-check, show the exported image and collect feedback. Apply the **mini
 - Overwrite the same `diagram.mmd` / `diagram.png` each round — don't create `v1`, `v2`, …
 - **Safety valve:** after 5 rounds, suggest the user fine-tune at [mermaid.live](https://mermaid.live).
 
-## Diagram Types
+## Diagram Types / 图表类型
 
 | Type | Keyword | Use for |
 |------|---------|---------|
@@ -117,15 +119,15 @@ After self-check, show the exported image and collect feedback. Apply the **mini
 | Mind Map | `mindmap` | topic breakdowns |
 | User Journey | `journey` | user-experience flows |
 
-## Syntax Reference
+## Syntax Reference / 语法参考
 
-**Flowchart**: See [reference/FLOWCHART.md](reference/FLOWCHART.md)
-**Sequence**: See [reference/SEQUENCE.md](reference/SEQUENCE.md)
-**Class & ER**: See [reference/CLASS-ER.md](reference/CLASS-ER.md)
-**Architecture**: See [reference/ARCHITECTURE.md](reference/ARCHITECTURE.md)
-**Other types**: See [reference/OTHER-TYPES.md](reference/OTHER-TYPES.md)
+**Flowchart / 流程图**: See [reference/FLOWCHART.md](reference/FLOWCHART.md)
+**Sequence / 时序图**: See [reference/SEQUENCE.md](reference/SEQUENCE.md)
+**Class & ER / 类图与 ER 图**: See [reference/CLASS-ER.md](reference/CLASS-ER.md)
+**Architecture / 架构图**: See [reference/ARCHITECTURE.md](reference/ARCHITECTURE.md)
+**Other types / 其他类型**: See [reference/OTHER-TYPES.md](reference/OTHER-TYPES.md)
 
-## Examples
+## Examples / 示例
 
 ### Example 1: API Authentication Flow
 
@@ -235,9 +237,9 @@ architecture-beta
 
 **Output files:** `api-architecture.mmd` + `api-architecture.png`
 
-## Export Commands
+## Export Commands / 导出命令
 
-### Option 1: Local Export (mmdc)
+### Option 1: Local Export (mmdc) / 选项 1 本地导出
 
 Requires `mmdc` installed locally. Best for offline use.
 
@@ -256,7 +258,7 @@ mmdc -i diagram.mmd -o diagram.svg
 mmdc -i diagram.mmd -o diagram.pdf
 ```
 
-### Option 2: Kroki API, Only After Explicit User Approval
+### Option 2: Kroki API, Only After Explicit User Approval / 选项 2 仅在用户授权后使用 Kroki
 
 Use [Kroki](https://kroki.io) only after the user explicitly approves sending the diagram source to a third party. It is not an automatic fallback when `mmdc` is unavailable.
 
@@ -282,7 +284,7 @@ curl -X POST -H "Content-Type: text/plain" --data-binary @diagram.mmd https://kr
 - Quick one-off diagrams
 - CI/CD pipelines without Node.js
 
-## Common Mistakes
+## Common Mistakes / 常见错误
 
 | Mistake | Fix |
 |---------|-----|

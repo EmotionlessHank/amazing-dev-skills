@@ -10,31 +10,31 @@ Elevates the 6-step SOP from LESSONS §14 from "advisory document" to "enforced 
 
 **Design rationale**: Historical data shows fix-commit rates > 50% on Figma implementation tasks (swap-figma 50%, betslip 78%). The root cause is AI skipping screenshot capture and visual comparison steps. This skill eliminates step-skipping through a structured gate-controlled workflow.
 
-## 全流程图
+## 全流程图 / Full implementation flow
 
 ```mermaid
 flowchart TD
-    accTitle: Figma 实现与视觉验收流程
-    accDescr: 从节点确认到逐组件视觉验收的受控实现流程
+    accTitle: Figma 实现与视觉验收流程 | Figma implementation and visual acceptance flow
+    accDescr: 从节点确认到逐组件视觉验收的受控实现流程 | controlled implementation from node confirmation to per-component visual acceptance
 
-    A[接收 Figma 节点与实现范围] ==> B{是否为整页节点}
-    B ==> |是| C[读取层级、拆分组件并确认顺序]
-    B ==> |否| D[确认单个组件边界]
-    C ==> E[逐个执行组件循环]
+    A[接收 Figma 节点与实现范围\nreceive Figma node and implementation scope] ==> B{是否为整页节点\nis it full-page}
+    B ==> |是 / yes| C[读取层级、拆分组件并确认顺序\nread hierarchy, split components, confirm order]
+    B ==> |否 / no| D[确认单个组件边界\nconfirm single-component boundary]
+    C ==> E[逐个执行组件循环\niterate component loops]
     D ==> E
-    E ==> F[读取设计数据并保存视觉基线]
-    F ==> G{基线截图可用}
-    G ==> |否| H[重试一次，仍失败则暂停并报告]
-    G ==> |是| I[分类资源并按精确规格实现]
-    I ==> J[类型检查与实现截图]
-    J ==> K{与基线存在可见偏差}
-    K ==> |是，未达三轮| L[记录差异并修正]
+    E ==> F[读取设计数据并保存视觉基线\nread design data and save visual baseline]
+    F ==> G{基线截图可用\nbaseline screenshot available}
+    G ==> |否 / no| H[重试一次，仍失败则暂停并报告\nretry once, pause and report if still failing]
+    G ==> |是 / yes| I[分类资源并按精确规格实现\nclassify assets and implement to exact spec]
+    I ==> J[类型检查与实现截图\ntype-check and capture implementation screenshot]
+    J ==> K{与基线存在可见偏差\nvisible difference from baseline}
+    K ==> |是，未达三轮 / yes, under 3 rounds| L[记录差异并修正\nlog diff and fix]
     L ==> J
-    K ==> |是，已达三轮| M[暂停并输出差异清单]
-    K ==> |否| N[通过视觉验收并记录证据]
-    N ==> O{还有待实现组件}
-    O ==> |是| E
-    O ==> |否| P[汇总文件、轮次与验收结果]
+    K ==> |是，已达三轮 / yes, at 3 rounds| M[暂停并输出差异清单\npause and output diff list]
+    K ==> |否 / no| N[通过视觉验收并记录证据\npass visual acceptance and log evidence]
+    N ==> O{还有待实现组件\nmore components remain}
+    O ==> |是 / yes| E
+    O ==> |否 / no| P[汇总文件、轮次与验收结果\nsummarize files, rounds, and acceptance]
 
     classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
     classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
@@ -46,7 +46,7 @@ flowchart TD
     class H,M risk
 ```
 
-图中的关键控制点是：先确定粒度，再保存基线，最后以实际截图闭环。任何一个门禁未通过，都不能把代码实现当作可交付结果。
+图说明：图中关键控制点是先确认粒度、保存基线，再用截图闭环；任一门禁未通过即暂停。The key control points are confirm granularity first, capture baseline, then close with screenshot comparison; any failed gate pauses progress.
 
 ---
 

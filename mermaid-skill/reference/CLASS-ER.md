@@ -1,4 +1,7 @@
-# Class & ER Diagram Syntax
+# Class & ER Diagram Syntax / 类图与 ER 图语法
+
+Class and entity-relationship quick reference for model structure, member visibility, relationships, and cardinality.
+类图与实体关系图的结构语法参考，覆盖可见性、关系写法和基数标记。
 
 ## Class Diagram
 

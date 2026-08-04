@@ -127,6 +127,8 @@ def validate_head_tree(repo_root: Path, head: str) -> None:
     codex_manifest = data["codex_manifest"]
     assert claude_manifest is not None and codex_manifest is not None
     for field in ("name", "version", "description"):
+        if not claude_manifest.get(field) or not codex_manifest.get(field):
+            fail(f"missing-head-manifest-field {field}")
         if claude_manifest.get(field) != codex_manifest.get(field):
             fail(f"head-manifest-mismatch {field}")
     if codex_manifest.get("skills") != "./skills/":
@@ -151,9 +153,15 @@ def validate_head_tree(repo_root: Path, head: str) -> None:
         ["git", "ls-tree", "-r", "--name-only", head, "plugins/hank-dev/skills"],
         cwd=repo_root, capture_output=True, text=True, check=True,
     ).stdout.splitlines()
-    skills = sorted(path for path in tree if path.count("/") == 4 and path.endswith("/SKILL.md"))
-    expected = sorted(claude_manifest.get("skills", []))
-    actual = [f"./skills/{Path(path).parent.name}/" for path in skills]
+    skill_dirs = sorted({Path(path).parts[3] for path in tree if len(Path(path).parts) >= 5})
+    for skill_dir in skill_dirs:
+        if f"plugins/hank-dev/skills/{skill_dir}/SKILL.md" not in tree:
+            fail(f"head-missing-skill {skill_dir}")
+    expected_skills = claude_manifest.get("skills", [])
+    if not isinstance(expected_skills, list) or not expected_skills:
+        fail("head-claude-manifest-skills")
+    expected = sorted(expected_skills)
+    actual = [f"./skills/{skill_dir}/" for skill_dir in skill_dirs]
     if expected != actual:
         fail("head-claude-skill-list")
     for relative_path in REQUIRED_EXECUTABLES:
@@ -175,6 +183,12 @@ def main() -> None:
 
     plugin_root = Path(__file__).resolve().parent.parent
     repo_root = plugin_root.parent.parent
+    if args.base:
+        validate_head_tree(repo_root, args.head)
+        validate_release_version(repo_root, args.base, args.head)
+        print("PASS hank-dev dual distribution")
+        return
+
     claude_manifest = read_json(plugin_root / ".claude-plugin/plugin.json")
     codex_manifest = read_json(plugin_root / ".codex-plugin/plugin.json")
     claude_marketplace = read_json(repo_root / ".claude-plugin/marketplace.json")
@@ -221,9 +235,6 @@ def main() -> None:
         if not path.is_file() or not os.access(path, os.X_OK):
             fail(f"not-executable {relative_path}")
 
-    if args.base:
-        validate_head_tree(repo_root, args.head)
-        validate_release_version(repo_root, args.base, args.head)
     print("PASS hank-dev dual distribution")
 
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+- Git tree 发布校验在带 `--base` 时不读取工作树，并对必填 metadata 和每个 skill 目录的 `SKILL.md` 完整校验。
+
 ## 0.2.2
 
 - 发布门禁改为直接验证待推送 Git tree 的 metadata、skills 和脚本权限，避免工作树内容掩盖提交内容。

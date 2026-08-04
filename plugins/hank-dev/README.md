@@ -10,7 +10,7 @@
 | autopilot | `/hank-dev:autopilot` | 方案确认后的全自动开发：分批开发、并行代码评审、交付文档、验收通知 |
 | worktree-dev | `/hank-dev:worktree-dev` | 强制 worktree 隔离开发：建分支、建 worktree、同步环境、锁定工作目录 |
 | resume-tailor | `/hank-dev:resume-tailor` | 简历/JD 定制流程：master CV 打磨、按 JD 定制、ATS/HR 双代理独立审查、diff 复核、归档 |
-| review | `/hank-dev:review` | 多代理 review：按 diff 规模自动判定单代理还是 team 编排，强制含一次独立 DeepSeek 复核 |
+| review | `/hank-dev:review` | 多代理 review：按 diff 规模自动判定单代理还是 team 编排。只有本次明确授权且敏感信息扫描通过时才执行独立 DeepSeek 复核，否则报告缺失原因。 |
 
 `feat` / `autopilot` / `worktree-dev` 仍带 `{placeholder}`，是多项目模板，需要按各自的 `SETUP.md` 在项目侧覆盖定制内容（见下面「关于模板占位符」）。
 

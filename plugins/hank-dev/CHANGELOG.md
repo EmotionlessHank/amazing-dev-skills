@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- 发布门禁改为直接验证待推送 Git tree 的 metadata、skills 和脚本权限，避免工作树内容掩盖提交内容。
+- 版本号采用严格的稳定 SemVer 格式，拒绝带前导零的版本段。
+- 修正 review workflow 对 DeepSeek 独立复核的条件说明。
+
 ## 0.2.1
 
 - 修复三个核心 workflow skill 的 YAML frontmatter，确保 Claude 严格校验和 runtime metadata 加载通过。

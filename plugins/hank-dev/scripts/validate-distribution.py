@@ -61,7 +61,7 @@ def git_show_json(repo_root: Path, revision: str, relative_path: str) -> dict | 
 
 
 def parse_version(value: object, description: str) -> tuple[int, int, int]:
-    if not isinstance(value, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value):
+    if not isinstance(value, str) or not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", value):
         fail(f"invalid-semver {description}")
     return tuple(int(part) for part in value.split("."))
 
@@ -111,6 +111,58 @@ def validate_release_version(repo_root: Path, base: str, head: str) -> None:
         fail("base-manifest-version-mismatch")
     if head_semver <= parse_version(base_claude.get("version"), "base"):
         fail("release-version-not-increased")
+
+
+def validate_head_tree(repo_root: Path, head: str) -> None:
+    paths = {
+        "claude_manifest": "plugins/hank-dev/.claude-plugin/plugin.json",
+        "codex_manifest": "plugins/hank-dev/.codex-plugin/plugin.json",
+        "claude_marketplace": ".claude-plugin/marketplace.json",
+        "codex_marketplace": ".agents/plugins/marketplace.json",
+    }
+    data = {name: git_show_json(repo_root, head, path) for name, path in paths.items()}
+    if any(value is None for value in data.values()):
+        fail("missing-head-distribution-file")
+    claude_manifest = data["claude_manifest"]
+    codex_manifest = data["codex_manifest"]
+    assert claude_manifest is not None and codex_manifest is not None
+    for field in ("name", "version", "description"):
+        if claude_manifest.get(field) != codex_manifest.get(field):
+            fail(f"head-manifest-mismatch {field}")
+    if codex_manifest.get("skills") != "./skills/":
+        fail("head-codex-skills-path")
+    claude_entries = data["claude_marketplace"].get("plugins", [])
+    codex_entries = data["codex_marketplace"].get("plugins", [])
+    if not isinstance(claude_entries, list) or not isinstance(codex_entries, list):
+        fail("head-marketplace-plugin-list")
+    claude_entry = next((entry for entry in claude_entries if entry.get("name") == "hank-dev"), None)
+    codex_entry = next((entry for entry in codex_entries if entry.get("name") == "hank-dev"), None)
+    if claude_entry is None or codex_entry is None:
+        fail("head-marketplace-hank-dev-entry")
+    if claude_entry.get("source") != "./plugins/hank-dev":
+        fail("head-claude-marketplace-source")
+    if codex_entry.get("source") != {"source": "local", "path": "./plugins/hank-dev"}:
+        fail("head-codex-marketplace-source")
+    if codex_entry.get("policy") != {"installation": "AVAILABLE", "authentication": "ON_INSTALL"}:
+        fail("head-codex-marketplace-policy")
+    if codex_entry.get("category") != "Productivity":
+        fail("head-codex-marketplace-category")
+    tree = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", head, "plugins/hank-dev/skills"],
+        cwd=repo_root, capture_output=True, text=True, check=True,
+    ).stdout.splitlines()
+    skills = sorted(path for path in tree if path.count("/") == 4 and path.endswith("/SKILL.md"))
+    expected = sorted(claude_manifest.get("skills", []))
+    actual = [f"./skills/{Path(path).parent.name}/" for path in skills]
+    if expected != actual:
+        fail("head-claude-skill-list")
+    for relative_path in REQUIRED_EXECUTABLES:
+        result = subprocess.run(
+            ["git", "ls-tree", head, f"plugins/hank-dev/{relative_path}"],
+            cwd=repo_root, capture_output=True, text=True, check=True,
+        )
+        if not result.stdout.startswith("100755 "):
+            fail(f"head-not-executable {relative_path}")
 
 
 def main() -> None:
@@ -170,6 +222,7 @@ def main() -> None:
             fail(f"not-executable {relative_path}")
 
     if args.base:
+        validate_head_tree(repo_root, args.head)
         validate_release_version(repo_root, args.base, args.head)
     print("PASS hank-dev dual distribution")
 

@@ -22,6 +22,46 @@ Core belief: **Code is ground truth.** Every plan conclusion must be grounded in
 
 feat ends = DD confirmed by a human; autopilot naturally follows.
 
+## 全流程图（需求到确认再交接 autopilot）
+
+```mermaid
+flowchart TD
+  accTitle: feat 从需求研究到确认交接的流程
+  accDescr: 以代码事实、风险分层和人工确认控制特性规划的流程
+
+  A["启动 /feat\n需求或关键词触发"]
+  A --> B[范围分析与风险分级]
+  B --> C[研读真实代码与相关契约]
+  C --> D{需要运行时真值}
+  D --> |是| E[只读运行时核验]
+  D --> |否| F[汇总代码研究证据]
+  E --> F
+  F --> G{结论与事实矛盾}
+  G --> |是| H[上报矛盾，暂停写 DD]
+  G --> |否| I{大风险且无内部先例}
+  I --> |是| J[三路最佳实践研究]
+  I --> |否| K[进入设计澄清]
+  J --> K
+  K --> L[必要时 Grill，随后撰写 DD]
+  L --> M[按风险规模开展计划评审]
+  M --> N{评审结论已收敛}
+  N --> |否| L
+  N --> |是| O[确认门]
+  O --> P{用户确认计划}
+  P --> |反馈| L
+  P --> |确认| Q[交接 DD、研究和评审记录]
+  Q --> R[autopilot 批次开发与代码审查]
+
+  classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
+  classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
+  classDef work fill:#eff6ff,color:#1e3a8a,stroke:#2563eb
+  classDef risk fill:#fef2f2,color:#991b1b,stroke:#dc2626,stroke-width:1.5px
+  class A,R startEnd
+  class D,G,I,N,O,P gate
+  class B,C,E,F,J,K,L,M,Q work
+  class H risk
+```
+
 ---
 
 ## Phase 0: Pre-flight Checks

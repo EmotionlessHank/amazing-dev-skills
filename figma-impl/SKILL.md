@@ -10,6 +10,44 @@ Elevates the 6-step SOP from LESSONS §14 from "advisory document" to "enforced 
 
 **Design rationale**: Historical data shows fix-commit rates > 50% on Figma implementation tasks (swap-figma 50%, betslip 78%). The root cause is AI skipping screenshot capture and visual comparison steps. This skill eliminates step-skipping through a structured gate-controlled workflow.
 
+## 全流程图
+
+```mermaid
+flowchart TD
+    accTitle: Figma 实现与视觉验收流程
+    accDescr: 从节点确认到逐组件视觉验收的受控实现流程
+
+    A[接收 Figma 节点与实现范围] ==> B{是否为整页节点}
+    B ==> |是| C[读取层级、拆分组件并确认顺序]
+    B ==> |否| D[确认单个组件边界]
+    C ==> E[逐个执行组件循环]
+    D ==> E
+    E ==> F[读取设计数据并保存视觉基线]
+    F ==> G{基线截图可用}
+    G ==> |否| H[重试一次，仍失败则暂停并报告]
+    G ==> |是| I[分类资源并按精确规格实现]
+    I ==> J[类型检查与实现截图]
+    J ==> K{与基线存在可见偏差}
+    K ==> |是，未达三轮| L[记录差异并修正]
+    L ==> J
+    K ==> |是，已达三轮| M[暂停并输出差异清单]
+    K ==> |否| N[通过视觉验收并记录证据]
+    N ==> O{还有待实现组件}
+    O ==> |是| E
+    O ==> |否| P[汇总文件、轮次与验收结果]
+
+    classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
+    classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
+    classDef work fill:#eff6ff,color:#1e3a8a,stroke:#2563eb
+    classDef risk fill:#fef2f2,color:#991b1b,stroke:#dc2626,stroke-width:1.5px
+    class A,P startEnd
+    class B,G,K,O gate
+    class C,D,E,F,I,J,L,N work
+    class H,M risk
+```
+
+图中的关键控制点是：先确定粒度，再保存基线，最后以实际截图闭环。任何一个门禁未通过，都不能把代码实现当作可交付结果。
+
 ---
 
 ## Inputs

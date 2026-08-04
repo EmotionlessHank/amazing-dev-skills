@@ -25,6 +25,44 @@ Simulates a real engineering team: product confirms PRD → engineers implement 
 8. **Never auto-push/merge to remote** — stops at local main branch squash commit; user decides on pushing
 9. **Strictly follow project conventions** — project `{RULES_DIR}` / conventions (Batch ≤N files, lessons-first, worktree default, tiered review fixes) all apply
 
+## 自动化主流程总览
+
+```mermaid
+flowchart TD
+  accTitle: autopilot 批次开发与验收流程
+  accDescr: 从已确认设计输入到批次实现、独立审查和人工验收的自动化流程
+
+  Start([触发 autopilot]) --> Input{是否已确认 DD 输入}
+  Input -->|否| Ask[提示确认计划并补齐输入]
+  Input -->|是| Prepare[定位文档、核对分支、读取约束]
+  Prepare --> Batches[按 DD 执行可验证批次]
+  Batches --> BatchGate{批次验证通过}
+  BatchGate -->|否| BatchFix[修复并重跑当前批次]
+  BatchFix --> BatchGate
+  BatchGate -->|是| FullGate[全量质量门禁]
+  FullGate --> Quality{全量门禁通过}
+  Quality -->|否| QualityFix[修复并重跑全量门禁]
+  QualityFix --> FullGate
+  Quality -->|是| Review[按风险派发 1 到 3 路独立审查]
+  Review --> Triage{存在阻断级发现}
+  Triage -->|是| Fix[修复并回归验证]
+  Fix --> Triage
+  Triage -->|否| Docs[归档变更、测试与验收证据]
+  Docs --> Accept[输出总结与人工验收清单]
+  Ask --> Accept
+  Accept --> Done([待用户人工验收完成])
+  Done --> End([关闭本次流程])
+
+  classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
+  classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
+  classDef work fill:#eff6ff,color:#1e3a8a,stroke:#2563eb
+  classDef risk fill:#fef2f2,color:#991b1b,stroke:#dc2626,stroke-width:1.5px
+  class Start,Done,End startEnd
+  class Input,BatchGate,Quality,Triage gate
+  class Prepare,Batches,FullGate,Review,Fix,Docs,Accept work
+  class Ask,BatchFix,QualityFix risk
+```
+
 ---
 
 ## Doc Archiving Convention (Mandatory)

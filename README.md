@@ -109,6 +109,7 @@ For the update workflow, how to add a new skill to the plugin, and the verificat
 | Skill | Description |
 |-------|-------------|
 | [figma-impl](./figma-impl) | Enforces pixel-perfect Figma-to-code fidelity via a 6-step SOP with hard gates: node confirmation → forceCode → screenshot baseline → asset processing → precise transcription → visual acceptance. |
+| [mermaid-skill](./mermaid-skill) | Generates Mermaid diagrams with local mmdc validation and visual readability checks across flowchart, sequence, class, ER, state, Gantt, C4, architecture, mindmap, and user journey diagrams. Kroki is an explicit opt-in remote fallback. |
 | [pencil-impl](./pencil-impl) | Pixel-perfect implementation from Pencil (.pen) design files to Vue code. 6-step gated SOP adapted for the Pencil MCP toolchain; enforces three-language i18n and CSS variable color mapping. |
 | [pen-audit](./pen-audit) | Deterministic lint gate (L1–L6) for Pencil design files: detects absolute-positioning regression, text/component overflow, unwrapped chip clouds, and ghost nodes before code generation. |
 | [pen2swift](./pen2swift) | Full pipeline from Pencil design files to SwiftUI: design lint → token-driven code generation → XcodeBuildMCP worst-case screenshot matrix → visual verdict → swift-snapshot-testing CI gate. |

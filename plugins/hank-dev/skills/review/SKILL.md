@@ -12,6 +12,45 @@ version: 1.1.0
 
 DeepSeek 复核是外部模型调用。只有用户明确授权本次外发，且待审 patch 通过敏感信息扫描时才执行。缺少授权、扫描阻断、调用失败、超时、输出为空或解析失败时，最终报告必须写明“DeepSeek 复核缺失”和具体原因。
 
+## 审查流程总览
+
+```mermaid
+flowchart TD
+  accTitle: 多代理代码审查与外发门禁流程
+  accDescr: 从审查范围收集到敏感扫描、独立复核与验收报告的流程
+
+  A[触发 review 流程] --> B[收集范围、diff 与相关上下文]
+  B --> C{按规模与风险选择审查深度}
+  C --> |轻量| D[单路 Claude 审查]
+  C --> |高风险或跨模块| E[多路风险域审查]
+  D --> F[汇总、去重并标注 Claude 发现]
+  E --> F
+  F --> G[敏感扫描与外发前门禁]
+  G --> H{扫描通过且用户授权外发}
+  H --> |是| I[受控 DeepSeek 复核]
+  H --> |否| J[记录复核缺失原因]
+  I --> K{外部结果可解析}
+  K --> |是| L[合并多方发现与证据]
+  K --> |否| J
+  J --> L
+  L --> M[高风险发现交由 skeptic 验证]
+  M --> N{存在高置信可修复项}
+  N --> |是| O[给出按严重程度排序的修复建议]
+  N --> |否| P[记录待确认项与验证缺口]
+  O --> Q[输出带证据行号的审查报告]
+  P --> Q
+  Q --> R[验收审查范围、风险层级与外发结论]
+
+  classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
+  classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
+  classDef work fill:#eff6ff,color:#1e3a8a,stroke:#2563eb
+  classDef risk fill:#fef2f2,color:#991b1b,stroke:#dc2626,stroke-width:1.5px
+  class A,R startEnd
+  class C,H,K,N gate
+  class B,D,E,F,G,I,L,M,O,P,Q work
+  class J risk
+```
+
 ## Step 1：规模与风险判定
 
 先读取需求和测试，再采集文件数、改动行数、跨模块情况以及鉴权、密钥、支付、外部输入、数据库、并发、重试、部署等风险面。

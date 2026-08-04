@@ -30,6 +30,7 @@ while read -r local_ref local_oid remote_ref remote_oid; do
 
   "$root/scripts/check-commit-message.py" --range "$commit_range" || status=1
   "$root/scripts/check-bilingual-docs.py" --base "$base_oid" --head "$local_oid" || status=1
+  python3 "$root/plugins/hank-dev/scripts/validate-distribution.py" --base "$base_oid" --head "$local_oid" || status=1
   "$root/scripts/run-main-ai-review.sh" "$base_oid" "$local_oid" || status=1
 done
 

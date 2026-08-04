@@ -1,6 +1,6 @@
 # Amazing Dev Skills
 
-A curated library of reusable Claude Code skills for AI-augmented software development — covering the full lifecycle from feature planning and UI implementation to deployment, system maintenance, and reporting.
+A curated library of reusable Claude Code and Codex skills for AI-augmented software development, covering the full lifecycle from feature planning and UI implementation to deployment, system maintenance, and reporting.
 
 Inspired by [awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills). Battle-tested in production across Web3, fintech, and mobile projects.
 
@@ -37,7 +37,9 @@ cp -r amazing-dev-skills/patch-audit .claude/skills/
 
 ## hank-dev Plugin
 
-This repo doubles as a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`). The `hank-dev` plugin bundles the personal dev pipeline plus career/review tooling, invoked as `hank-dev:<skill>`:
+This repository supports both official plugin metadata layouts. Claude Code reads `.claude-plugin/marketplace.json`; Codex reads `.agents/plugins/marketplace.json`. Both platforms install the same `plugins/hank-dev/` content root, so skills and security scripts have one source of truth.
+
+The `hank-dev` plugin bundles the personal dev pipeline plus career/review tooling, invoked as `hank-dev:<skill>`:
 
 | Skill | Invocation | Description |
 |-------|------------|-------------|
@@ -64,7 +66,16 @@ Enable it in a project via `.claude/settings.json`:
 }
 ```
 
-Or interactively: `/plugin marketplace add EmotionlessHank/amazing-dev-skills` (this only registers the marketplace, it does not enable the plugin), then `/plugin` to actually toggle `hank-dev` on, then `/reload-plugins`.
+For Claude Code, interactively run `/plugin marketplace add EmotionlessHank/amazing-dev-skills`, enable `hank-dev` in `/plugin`, then run `/reload-plugins`.
+
+For Codex, install from the Git marketplace:
+
+```bash
+codex plugin marketplace add EmotionlessHank/amazing-dev-skills --ref main
+codex plugin add hank-dev@amazing-dev-skills
+```
+
+For Codex updates, refresh the Git marketplace, then verify the installed artifact version and source with `codex plugin list --json`. Marketplace refresh does not promise to update an already installed artifact. If the version did not change, remove and add `hank-dev@amazing-dev-skills` again, then start a new Codex session.
 
 For the update workflow, how to add a new skill to the plugin, and the verification checklist, see [`plugins/hank-dev/README.md`](./plugins/hank-dev/README.md).
 

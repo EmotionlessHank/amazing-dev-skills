@@ -1,6 +1,6 @@
 # hank-dev 插件
 
-个人开发流水线插件，通过 `hank-dev:<skill>` 方式调用。发布在 amazing-dev-skills 这个 marketplace 仓库里，由本仓库统一管理，其他工作区通过声明这个 marketplace 来加载。
+个人开发流水线插件，通过 `hank-dev:<skill>` 方式调用。发布在 amazing-dev-skills 这个 marketplace 仓库里，同时支持 Claude Code 与 Codex，二者共享本插件目录中的 skills 与 scripts。
 
 ## 技能清单
 
@@ -16,7 +16,7 @@
 
 ---
 
-## 在新项目里安装
+## 在 Claude Code 项目里安装
 
 **方式一，直接写配置文件（推荐，一步到位）**：写入目标项目的 `.claude/settings.json`（或 `.claude/settings.local.json`，只想自己本地生效不想提交进项目仓库就用这个）：
 
@@ -59,7 +59,7 @@
 
 ---
 
-## 增量更新流程
+## Claude Code 增量更新流程
 
 在这个仓库里改一个技能，改完直接影响所有启用了 `hank-dev` 的项目，不需要逐项目改代码：
 
@@ -75,7 +75,39 @@ git add -A && git commit -m "..." && git push origin main
 /plugin marketplace update amazing-dev-skills
 ```
 
-`marketplace.json` 和 `plugin.json` 都不设 `version` 字段，每一次 commit 即视为最新版本，不需要手动 bump 版本号。
+发布版本由 `.claude-plugin/plugin.json` 与 `.codex-plugin/plugin.json` 共同维护，二者必须使用同一 SemVer。发布后先刷新 marketplace，再更新已安装 plugin，最后 reload 当前会话。
+
+```bash
+/plugin marketplace update amazing-dev-skills
+/plugin update hank-dev@amazing-dev-skills
+/reload-plugins
+```
+
+## 在 Codex 里安装和更新
+
+Codex 使用仓库根的 `.agents/plugins/marketplace.json` 与本插件的 `.codex-plugin/plugin.json`。首次安装：
+
+```bash
+codex plugin marketplace add EmotionlessHank/amazing-dev-skills --ref main
+codex plugin add hank-dev@amazing-dev-skills
+codex plugin list --json
+```
+
+日常更新先刷新 Git marketplace：
+
+```bash
+codex plugin marketplace upgrade amazing-dev-skills --json
+codex plugin list --json
+```
+
+`marketplace upgrade` 只承诺刷新 Git marketplace，不承诺自动更新已经安装的 plugin artifact。若 `codex plugin list --json` 显示版本或 source 未更新，执行：
+
+```bash
+codex plugin remove hank-dev@amazing-dev-skills
+codex plugin add hank-dev@amazing-dev-skills
+```
+
+随后新开 Codex session。不要编辑 `/Users/hang/.codex/plugins/cache/`，缓存由 Codex 管理。
 
 ---
 
@@ -89,7 +121,8 @@ git add -A && git commit -m "..." && git push origin main
 2. 编辑 `plugins/hank-dev/.claude-plugin/plugin.json`，在 `skills` 数组里加一行 `"./skills/<new-skill-name>/"`
 3. 在本文件顶部的技能清单表格加一行
 4. commit + push
-5. 找一个已启用 `hank-dev` 的项目跑 `/plugin marketplace update amazing-dev-skills`，再 `/reload-plugins`（不是 `/reload-skills`），确认新技能出现在列表里，再触发一次验证真的能用
+5. 修改两个 manifest 的相同版本号，运行 `python3 plugins/hank-dev/scripts/validate-distribution.py`
+6. 在 Claude 或 Codex 的正式安装路径中验证新技能可见
 
 ---
 
@@ -98,9 +131,10 @@ git add -A && git commit -m "..." && git push origin main
 新增/修改技能后，在任意一个已启用 `hank-dev` 的项目里过一遍：
 
 ```bash
-/plugin marketplace update amazing-dev-skills   # 拉最新
-/plugin                                          # 确认 hank-dev 状态是 enabled，不是只注册了 marketplace 没启用
-/reload-plugins                                  # 让改动真正生效，不是 /reload-skills
+/plugin marketplace update amazing-dev-skills
+/plugin update hank-dev@amazing-dev-skills
+/plugin
+/reload-plugins
 ```
 
 判定通过：① `/plugin` 列表里 `hank-dev` 明确显示 enabled（只跑过 `marketplace add` 但没手动启用过的话，这里会是灰的/未启用，容易误以为已经装好）；② `/reload-plugins` 的输出里插件数/技能数有相应增量；③ 用完整冒号形式（如 `/hank-dev:review`）或触发关键词能进对应技能的流程，裸的 `/hank-dev` 不会有反应属于正常；④ 需要占位符的技能（feat/autopilot/worktree-dev）在这个项目要么有本地覆盖版本，要么已经按 `SETUP.md` 替换过占位符。
@@ -110,6 +144,7 @@ git add -A && git commit -m "..." && git push origin main
 ## 回滚
 
 - 项目侧：删 `.claude/settings.json` 里 `enabledPlugins` 对应项，技能即下线。
-- 中心侧：`git revert` 对应 commit，各项目下次 `marketplace update` 自动回退。
+- Claude 中心侧：`git revert` 对应 commit，各项目刷新 marketplace、更新 plugin、reload 后回退。
+- Codex 中心侧：`git revert` 对应 commit，各项目刷新 marketplace，必要时 remove、add plugin 后新开 session 回退。
 
 更底层的 marketplace 迁移背景见仓库根目录的 `MIGRATION-marketplace.md`。

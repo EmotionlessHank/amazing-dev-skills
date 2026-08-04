@@ -1,6 +1,6 @@
 ---
 name: worktree-dev
-description: Enforced worktree-isolated development. Triggers when the user says "/worktree-dev", "worktree dev", "isolated dev", "open a worktree for this", or "wt dev". Automatically executes: pull a new branch from main → create worktree → sync env → inject isolation context → lock working directory throughout. Solves two high-frequency problems: "agent drifts out of the worktree and contaminates the main workspace" and "forgot to branch off main before starting".
+description: 'Enforced worktree-isolated development. Triggers when the user says "/worktree-dev", "worktree dev", "isolated dev", "open a worktree for this", or "wt dev". Automatically executes: pull a new branch from main → create worktree → sync env → inject isolation context → lock working directory throughout. Solves two high-frequency problems: "agent drifts out of the worktree and contaminates the main workspace" and "forgot to branch off main before starting".'
 version: 2.0.0
 ---
 

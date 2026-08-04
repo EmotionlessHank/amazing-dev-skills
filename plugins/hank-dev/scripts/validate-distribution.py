@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -12,6 +14,15 @@ REQUIRED_EXECUTABLES = (
     "scripts/check-review-patch.sh",
     "scripts/run-deepseek-review.py",
     "scripts/validate-review-security.sh",
+)
+RELEASE_PATH_PREFIXES = (
+    ".agents/plugins/marketplace.json",
+    ".claude-plugin/marketplace.json",
+    "plugins/hank-dev/.claude-plugin/",
+    "plugins/hank-dev/.codex-plugin/",
+    "plugins/hank-dev/scripts/",
+    "plugins/hank-dev/skills/",
+    "plugins/hank-dev/CHANGELOG.md",
 )
 
 
@@ -30,7 +41,61 @@ def read_json(path: Path) -> dict:
     return content
 
 
+def git_show_json(repo_root: Path, revision: str, relative_path: str) -> dict | None:
+    result = subprocess.run(
+        ["git", "show", f"{revision}:{relative_path}"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        return None
+    try:
+        content = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        fail(f"invalid-base-json {relative_path}")
+    if not isinstance(content, dict):
+        fail(f"base-json-object-required {relative_path}")
+    return content
+
+
+def validate_release_version(repo_root: Path, base: str, head: str, version: str) -> None:
+    changed = subprocess.run(
+        ["git", "diff", "--name-only", f"{base}...{head}"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    if not any(path.startswith(RELEASE_PATH_PREFIXES) for path in changed):
+        return
+
+    changelog = repo_root / "plugins/hank-dev/CHANGELOG.md"
+    if f"## {version}" not in changelog.read_text(encoding="utf-8"):
+        fail("changelog-version")
+
+    base_claude = git_show_json(repo_root, base, "plugins/hank-dev/.claude-plugin/plugin.json")
+    base_codex = git_show_json(repo_root, base, "plugins/hank-dev/.codex-plugin/plugin.json")
+    if base_claude is None and base_codex is None:
+        return
+    if base_claude is None:
+        fail("missing-base-claude-manifest")
+    if base_codex is None:
+        return
+    if base_claude.get("version") != base_codex.get("version"):
+        fail("base-manifest-version-mismatch")
+    if base_claude.get("version") == version:
+        fail("release-version-not-bumped")
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base")
+    parser.add_argument("--head", default="HEAD")
+    args = parser.parse_args()
+    if args.base is None and args.head != "HEAD":
+        fail("head-requires-base")
+
     plugin_root = Path(__file__).resolve().parent.parent
     repo_root = plugin_root.parent.parent
     claude_manifest = read_json(plugin_root / ".claude-plugin/plugin.json")
@@ -78,6 +143,9 @@ def main() -> None:
         path = plugin_root / relative_path
         if not path.is_file() or not os.access(path, os.X_OK):
             fail(f"not-executable {relative_path}")
+
+    if args.base:
+        validate_release_version(repo_root, args.base, args.head, claude_manifest["version"])
     print("PASS hank-dev dual distribution")
 
 

@@ -12,7 +12,7 @@
 - 增加 Codex plugin manifest 与 repo scoped marketplace
 - 用无依赖校验锁定两套 metadata 与共享 skills 的一致性
 - 写明两端首次安装、升级、当前会话刷新、回滚步骤
-- 用本机 Codex CLI 验证 Git marketplace 的发现、安装和更新
+- 用本机 Codex CLI 验证本地副本 marketplace 的发现、安装和缓存内容
 
 不在本次范围：
 
@@ -97,7 +97,7 @@ Codex manifest 使用 SemVer。Claude manifest 同样加入同一 SemVer，版�
 1. 更新 `/Users/hang/work/.worktrees/amazing-dev-skills-dual-plugin-distribution/README.md`
 2. 更新 `/Users/hang/work/.worktrees/amazing-dev-skills-dual-plugin-distribution/plugins/hank-dev/README.md`
 3. 新增 `CHANGELOG.md`，记录首个双平台版本
-4. 用 Codex CLI 添加临时 Git marketplace，安装 plugin，升级 marketplace，记录真实结果
+4. 用 Codex CLI 添加临时本地副本 marketplace，安装 plugin，记录真实结果
 5. 在可用时运行 Claude 官方 validate，缺少 Claude CLI 时明确记录验证缺口
 
 ## 5. 测试决策
@@ -107,7 +107,7 @@ Codex manifest 使用 SemVer。Claude manifest 同样加入同一 SemVer，版�
 | 静态结构 | 两个 marketplace 与 manifest 均可被 JSON 解析，所有路径和 skills 可达 |
 | 版本一致性 | 两端 manifest name 与 version 相同 |
 | 安全回归 | `validate-review-security.sh` 保持通过，安装后可执行 scripts 的权限可验证 |
-| Codex 冒烟 | Git marketplace 可被 CLI 添加，plugin 可列出或安装，upgrade 后 artifact 的版本与 source 可验证 |
+| Codex 冒烟 | 临时本地副本 marketplace 可被 CLI 添加，plugin 可安装，缓存中的 skills 与可执行 scripts 可验证 |
 | Claude 冒烟 | CLI 存在时执行严格 validate，否则保留为人工命令与缺口 |
 
 ## 6. 风险矩阵
@@ -133,6 +133,7 @@ Git marketplace 验收失败时，删除 Codex Git 安装与 marketplace。现�
 
 - 已修复三个 skill 的 YAML frontmatter，并为 Claude marketplace 补齐 description。
 - 已实现基于 Git base 的发布版本门禁，并接入 `/Users/hang/work/.worktrees/amazing-dev-skills-dual-plugin-distribution/.githooks/pre-push`。
-- 已将 changelog 放在 `/Users/hang/work/.worktrees/amazing-dev-skills-dual-plugin-distribution/plugins/hank-dev/CHANGELOG.md`，实际发布版本为 0.2.1。
+- 已将 changelog 放在 `/Users/hang/work/.worktrees/amazing-dev-skills-dual-plugin-distribution/plugins/hank-dev/CHANGELOG.md`，当前发布版本为 0.2.3。
 - 已通过独立名称的临时 Codex marketplace 安装 0.2.0，验证 5 个 skills 与 3 个可执行 scripts 后删除测试 plugin 与 marketplace。`hank-dev@personal` 保持原版本、来源和启用状态。
 - 已补充 Claude 与 Codex 的客户端回滚流程。发布错误只能通过更高 patch 版本修复，不复用或降低版本号。
+- 发布门禁进一步改为验证 `--head` 指向的 Git tree，覆盖 metadata、marketplace entry、skills 和脚本权限，不再信任未提交的工作树内容。

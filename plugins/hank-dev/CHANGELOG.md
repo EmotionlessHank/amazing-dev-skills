@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- 英文与中文双语覆盖到 `mermaid-skill`，并补充 `README` 目录项与 `SKILL.md`、各 `reference/*.md` 的中英文用途说明，明确本地 `mmdc` 优先、Kroki 需用户授权。
+- Updated the `mermaid-skill` documentation set with bilingual coverage for the catalog entry, skill prompt file, and reference guides, with explicit local-first `mmdc` priority and user-approved Kroki usage.
+
 ## 0.2.3
 
 - Git tree 发布校验在带 `--base` 时不读取工作树，并对必填 metadata 和每个 skill 目录的 `SKILL.md` 完整校验。

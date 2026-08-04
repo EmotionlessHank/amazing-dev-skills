@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -59,7 +60,23 @@ def git_show_json(repo_root: Path, revision: str, relative_path: str) -> dict | 
     return content
 
 
-def validate_release_version(repo_root: Path, base: str, head: str, version: str) -> None:
+def parse_version(value: object, description: str) -> tuple[int, int, int]:
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value):
+        fail(f"invalid-semver {description}")
+    return tuple(int(part) for part in value.split("."))
+
+
+def git_show_text(repo_root: Path, revision: str, relative_path: str) -> str | None:
+    result = subprocess.run(
+        ["git", "show", f"{revision}:{relative_path}"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
+def validate_release_version(repo_root: Path, base: str, head: str) -> None:
     changed = subprocess.run(
         ["git", "diff", "--name-only", f"{base}...{head}"],
         cwd=repo_root,
@@ -70,9 +87,17 @@ def validate_release_version(repo_root: Path, base: str, head: str, version: str
     if not any(path.startswith(RELEASE_PATH_PREFIXES) for path in changed):
         return
 
-    changelog = repo_root / "plugins/hank-dev/CHANGELOG.md"
-    if f"## {version}" not in changelog.read_text(encoding="utf-8"):
+    head_claude = git_show_json(repo_root, head, "plugins/hank-dev/.claude-plugin/plugin.json")
+    head_codex = git_show_json(repo_root, head, "plugins/hank-dev/.codex-plugin/plugin.json")
+    changelog = git_show_text(repo_root, head, "plugins/hank-dev/CHANGELOG.md")
+    if head_claude is None or head_codex is None or changelog is None:
+        fail("missing-head-release-files")
+    if head_claude.get("version") != head_codex.get("version"):
+        fail("head-manifest-version-mismatch")
+    head_version = head_claude.get("version")
+    if not re.search(rf"^## {re.escape(str(head_version))}$", changelog, re.MULTILINE):
         fail("changelog-version")
+    head_semver = parse_version(head_version, "head")
 
     base_claude = git_show_json(repo_root, base, "plugins/hank-dev/.claude-plugin/plugin.json")
     base_codex = git_show_json(repo_root, base, "plugins/hank-dev/.codex-plugin/plugin.json")
@@ -84,8 +109,8 @@ def validate_release_version(repo_root: Path, base: str, head: str, version: str
         return
     if base_claude.get("version") != base_codex.get("version"):
         fail("base-manifest-version-mismatch")
-    if base_claude.get("version") == version:
-        fail("release-version-not-bumped")
+    if head_semver <= parse_version(base_claude.get("version"), "base"):
+        fail("release-version-not-increased")
 
 
 def main() -> None:
@@ -145,7 +170,7 @@ def main() -> None:
             fail(f"not-executable {relative_path}")
 
     if args.base:
-        validate_release_version(repo_root, args.base, args.head, claude_manifest["version"])
+        validate_release_version(repo_root, args.base, args.head)
     print("PASS hank-dev dual distribution")
 
 

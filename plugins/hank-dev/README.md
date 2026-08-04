@@ -146,5 +146,8 @@ codex plugin add hank-dev@amazing-dev-skills
 - 项目侧：删 `.claude/settings.json` 里 `enabledPlugins` 对应项，技能即下线。
 - Claude 中心侧：`git revert` 对应 commit，各项目刷新 marketplace、更新 plugin、reload 后回退。
 - Codex 中心侧：`git revert` 对应 commit，各项目刷新 marketplace，必要时 remove、add plugin 后新开 session 回退。
+- Claude 项目侧：在 `/plugin` 中禁用或卸载 `hank-dev@amazing-dev-skills`，然后 `/reload-plugins`。如不再使用该 marketplace，再移除 marketplace 配置。
+- Codex 项目侧：执行 `codex plugin remove hank-dev@amazing-dev-skills`，如不再使用该 marketplace，再执行 `codex plugin marketplace remove amazing-dev-skills`，随后新开 session。
+- 删除 Git 分发 plugin 或 marketplace 不会删除独立的 `hank-dev@personal`，它仍可作为本地回滚基线。
 
 更底层的 marketplace 迁移背景见仓库根目录的 `MIGRATION-marketplace.md`。

@@ -42,23 +42,27 @@ flowchart TD
   I --> |是 / yes| J[三路最佳实践研究\nthree-path best-practice research]
   I --> |否 / no| K[进入设计澄清\nenter design clarification]
   J --> K
-  K --> L[必要时 Grill，随后撰写 DD\ngrill if needed, then draft DD]
-  L --> M[按风险规模开展计划评审\nrun plan review by risk scale]
-  M --> N{"评审结论已收敛<br/>review conclusions converged"}
-  N --> |否 / no| L
-  N --> |是 / yes| O[确认门\nconfirmation gate]
-  O --> P{"用户确认计划<br/>user confirms plan"}
-  P --> |反馈 / revision| L
-  P --> |确认 / confirm| Q[交接 DD、研究和评审记录\nhandoff DD, research, and review records]
-  Q --> R[autopilot 批次开发与代码审查\nautopilot batch development and code review]
+  K --> L{"需要 Grill 或原生决策提问<br/>grill or native decision question needed"}
+  L --> |是 / yes| M[Codex 原生结构化提问\none decision group, 2 to 3 choices]
+  M --> N[等待回答并记录到 DD\nwait for answer and record in DD]
+  L --> |否 / no| O[撰写 DD\nwrite DD]
+  N --> O
+  O --> P[按风险规模开展计划评审\nrun plan review by risk scale]
+  P --> Q{"评审结论已收敛<br/>review conclusions converged"}
+  Q --> |否 / no| O
+  Q --> |是 / yes| R[确认门\nconfirmation gate]
+  R --> S{"用户确认计划<br/>user confirms plan"}
+  S --> |反馈 / revision| O
+  S --> |确认 / confirm| T[交接 DD、研究和评审记录\nhandoff DD, research, and review records]
+  T --> U[autopilot 批次开发与代码审查\nautopilot batch development and code review]
 
   classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
   classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
   classDef work fill:#eff6ff,color:#1e3a8a,stroke:#2563eb
   classDef risk fill:#fef2f2,color:#991b1b,stroke:#dc2626,stroke-width:1.5px
-  class A,R startEnd
-  class D,G,I,N,O,P gate
-  class B,C,E,F,J,K,L,M,Q work
+  class A,U startEnd
+  class D,G,I,L,Q,R,S gate
+  class B,C,E,F,J,K,M,N,O,P,T work
   class H risk
 ```
 
@@ -214,20 +218,32 @@ Research reveals the requested direction is a known anti-pattern / conflicts wit
 
 ## Phase 3: Collaborative Plan Authoring (Grill → Write the DD)
 
-### 3.1 Grill / Clarification Gate (human-in-the-loop)
+### 3.1 Grill / Clarification Gate（人工参与） / Grill and clarification gate (human-in-the-loop)
 
 After research lands and **before** drafting the DD, walk down each branch of the design tree and grill the user on the genuine ambiguities one-by-one until shared understanding, then fold the conclusions into the DD. Purpose: eliminate "writing a plan on assumptions" and "silently picking one of several viable options without aligning with the human". If Phase 2R ran, its source-graded recommendation (and any real disagreement it surfaced between agents) is one of the inputs behind each question's "recommended answer" below.
 
-Trigger:
+触发条件 / Trigger:
 
-| Signal | Grill scope |
+| 信号 / Signal | Grill 范围 / Grill scope |
 |--------|-------------|
-| Risk **small** and no ambiguity (pure additive/styling/copy) | Skip → go to 3.2 |
-| Risk **medium**, or research surfaced ≥1 unknown / multi-option branch that affects plan direction | **Required** — focus on 2–3 key decision groups |
-| Risk **large** (cross-repo contract / funds·auth·payment / architecture / new dependency) | **Required** — walk the full design tree |
-| User says "grill me" / "stress test this plan" (can trigger standalone on an existing DD/plan) | Enter this step and grill the target branch-by-branch |
+| 风险为**小**且没有歧义，例如纯新增、样式或文案，Risk **small** and no ambiguity, such as pure additive, styling, or copy changes | 跳过，进入 3.2。Skip and go to 3.2. |
+| 风险为**中**，或研究发现至少一个会影响方案方向的未知项或多选分支，Risk **medium**, or research surfaced at least one unknown or multi-option branch that affects plan direction | **必须执行**，聚焦 2 到 3 个关键决策组。**Required**, focus on 2 to 3 key decision groups. |
+| 风险为**大**，例如跨仓契约、资金、认证、支付、架构或新依赖，Risk **large**, such as cross-repo contracts, funds, auth, payment, architecture, or a new dependency | **必须执行**，走完整设计树。**Required**, walk the full design tree. |
+| 用户说“grill me”或“stress test this plan”，可对已有 DD 或计划单独触发，User says "grill me" or "stress test this plan", including a standalone trigger for an existing DD or plan | 进入本步骤，按分支逐一追问目标。Enter this step and grill the target branch-by-branch. |
 
-Grill ground rules (inherits Phase 2 "code is ground truth"):
+#### Codex 原生交互绑定 / Codex native interaction binding
+
+进入本步骤时，优先使用当前 Codex 表面提供的原生结构化提问界面。每一轮只处理一个相互关联的决策组，提供 2 到 3 个互斥选项，将推荐选项放在第一位，并给出一行理由。等待用户的选择或文字反馈后，立即记录为 DD 中“已与用户对齐”的决策，再继续下一组。
+
+When this step is entered, prefer the native structured-question interface exposed by the current Codex surface. Handle exactly one related decision group per round, offer 2 to 3 mutually exclusive choices, put the recommended option first, and include a one-line rationale. Wait for the user's selection or written feedback, then immediately record it in the DD as a decision aligned with the user before continuing.
+
+- Codex App 或可用原生交互的表面，使用原生结构化问题。不要把同一决策拆成多题问卷，也不要在问题待答时开始编码。 In Codex App or another surface with native interaction, use a native structured question. Do not turn one decision into a multi-question survey or begin coding while the question is pending.
+- 原生结构化提问不可用时，只提出一个简短的纯文本问题并等待回复。 If native structured questions are unavailable, ask one concise plain-text question and wait for the reply.
+- 只有在已连接 tmux 的 OMX CLI 运行时才使用 `omx question`。不要为了提问而在 Codex App 中强行启动它。 Use `omx question` only in an attached-tmux OMX CLI runtime. Do not force-start it in Codex App merely to ask a question.
+- 不启动嵌套的独立 `/grill-me` 会话。Grill 是 `feat` 的 Phase 3.1，必须保留同一轮研究证据和 DD 上下文。 Do not start a nested standalone `/grill-me` session. Grill is Phase 3.1 of `feat` and must retain the same research evidence and DD context.
+- 用户的回答若可由代码、研究或只读核验判定，返回 Phase 2 取证后再继续。 If the answer can be determined from code, research, or read-only verification, return to Phase 2 for evidence before continuing.
+
+Grill 规则，继承 Phase 2 的“代码是事实依据”原则 / Grill ground rules, inheriting Phase 2 "code is ground truth":
 
 - ⛔ **Questions answerable from code / research / read-only server verification must NOT be asked to the user** — go back to Phase 2 and read code / grep / curl. Only escalate what code genuinely can't answer.
 - ✅ Only ask these genuine ambiguities: **product trade-offs** (which behavior/semantics), **priority & scope boundary** (how far this iteration goes), **expected contract of external dependencies** (frontend/contract/PM-side agreements not findable in code), **preference on irreversible decisions** (when the chosen path is hard to roll back).

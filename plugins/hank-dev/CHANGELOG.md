@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- `feat` 的 Phase 3.1 现明确绑定 Codex 原生结构化提问，每轮只处理一个决策组，提供 2 到 3 个互斥选项、推荐项与理由，等待回复后将结论记录到 DD。流程图也展示了原生提问、等待回答和写入 DD 的路径。
+- Phase 3.1 of `feat` now explicitly binds to Codex native structured questions: each round handles one decision group with 2 to 3 mutually exclusive choices, a recommendation, and rationale, then waits and records the conclusion in the DD. The flowchart now shows the native question, answer wait, and DD-recording path.
+
 ## 0.2.4
 
 - 英文与中文双语覆盖到 `mermaid-skill`，并补充 `README` 目录项与 `SKILL.md`、各 `reference/*.md` 的中英文用途说明，明确本地 `mmdc` 优先、Kroki 需用户授权。

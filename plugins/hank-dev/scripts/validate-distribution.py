@@ -9,12 +9,17 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REQUIRED_EXECUTABLES = (
     "scripts/check-review-patch.sh",
     "scripts/run-deepseek-review.py",
     "scripts/validate-review-security.sh",
+)
+REQUIRED_QUOTA_FILES = (
+    "scripts/autopilot_quota_router.py",
+    "tests/test_autopilot_quota_router.py",
 )
 RELEASE_PATH_PREFIXES = (
     ".agents/plugins/marketplace.json",
@@ -23,6 +28,7 @@ RELEASE_PATH_PREFIXES = (
     "plugins/hank-dev/.codex-plugin/",
     "plugins/hank-dev/scripts/",
     "plugins/hank-dev/skills/",
+    "plugins/hank-dev/tests/",
     "plugins/hank-dev/CHANGELOG.md",
 )
 
@@ -74,6 +80,63 @@ def git_show_text(repo_root: Path, revision: str, relative_path: str) -> str | N
         text=True,
     )
     return result.stdout if result.returncode == 0 else None
+
+
+def validate_quota_contract(autopilot: str | None, feat: str | None) -> None:
+    if autopilot is None or feat is None:
+        fail("missing-quota-contract-docs")
+    for expected in (
+        "daily_headroom = 25% - today_used_percent",
+        "wave_reserve = worker_count × 5%",
+        "decide_batch_route()",
+        "dispatch_wave()",
+        "--input {ROUTE_REQUEST_FILE}",
+        "--current-period-id {CURRENT_PERIOD_ID}",
+        "launch_results",
+        "AWAITING_APPROVAL",
+        "PARTIAL_BLOCKED",
+        "plan_execution_waves()",
+    ):
+        if expected not in autopilot:
+            fail(f"autopilot-quota-contract {expected}")
+    for expected in (
+        "reasoning_effort: high | xhigh | max",
+        "effort_basis:",
+        "spark_eligible: true | false",
+        "spark_ineligibility_reasons:",
+        "depends_on:",
+        "owned_files:",
+        "runtime_resources:",
+    ):
+        if expected not in feat:
+            fail(f"feat-quota-contract {expected}")
+
+
+def run_quota_tests(plugin_root: Path) -> None:
+    result = subprocess.run(
+        [sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests", "-v"],
+        cwd=plugin_root,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        print(result.stdout, file=sys.stderr)
+        print(result.stderr, file=sys.stderr)
+        fail("quota-router-tests")
+
+
+def validate_quota_tree(repo_root: Path, revision: str) -> None:
+    prefix = "plugins/hank-dev/"
+    with tempfile.TemporaryDirectory(prefix="hank-dev-quota-") as temp_dir:
+        plugin_root = Path(temp_dir)
+        for relative_path in REQUIRED_QUOTA_FILES:
+            content = git_show_text(repo_root, revision, f"{prefix}{relative_path}")
+            if content is None:
+                fail(f"missing-head-quota-file {relative_path}")
+            path = plugin_root / relative_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        run_quota_tests(plugin_root)
 
 
 def validate_release_version(repo_root: Path, base: str, head: str) -> None:
@@ -171,6 +234,11 @@ def validate_head_tree(repo_root: Path, head: str) -> None:
         )
         if not result.stdout.startswith("100755 "):
             fail(f"head-not-executable {relative_path}")
+    validate_quota_contract(
+        git_show_text(repo_root, head, "plugins/hank-dev/skills/autopilot/SKILL.md"),
+        git_show_text(repo_root, head, "plugins/hank-dev/skills/feat/SKILL.md"),
+    )
+    validate_quota_tree(repo_root, head)
 
 
 def main() -> None:
@@ -234,6 +302,15 @@ def main() -> None:
         path = plugin_root / relative_path
         if not path.is_file() or not os.access(path, os.X_OK):
             fail(f"not-executable {relative_path}")
+
+    for relative_path in REQUIRED_QUOTA_FILES:
+        if not (plugin_root / relative_path).is_file():
+            fail(f"missing-quota-file {relative_path}")
+    validate_quota_contract(
+        (plugin_root / "skills" / "autopilot" / "SKILL.md").read_text(encoding="utf-8"),
+        (plugin_root / "skills" / "feat" / "SKILL.md").read_text(encoding="utf-8"),
+    )
+    run_quota_tests(plugin_root)
 
     print("PASS hank-dev dual distribution")
 

@@ -14,6 +14,20 @@
 
 `feat` / `autopilot` / `worktree-dev` 仍带 `{placeholder}`，是多项目模板，需要按各自的 `SETUP.md` 在项目侧覆盖定制内容（见下面「关于模板占位符」）。
 
+## 配额感知路由
+
+Autopilot 的开发模型由用量快照和额度门禁决定，不由任务复杂度直接决定。周剩余大于或等于 25%，且当天 25% 可支配目标能覆盖每个 worker 5% 的波次预留时，使用 Terra。周剩余 10% 至 24%，或 Terra 日额度预留不足时，必须取得本次运行的 Luna 授权。周剩余低于 10% 时，只在实时模型目录确认 Spark 可用、用户明确授权且 Batch 通过安全门禁后使用 Spark。
+
+Autopilot selects the development model through usage and quota gates, not task complexity. Terra is admitted at 25% or more weekly remaining when the daily 25% target covers a 5% reserve per worker. Luna requires run-scoped approval from 10% through 24%, or when Terra daily reserve is insufficient. Below 10%, Spark requires live-catalog availability, explicit approval, and Batch safety eligibility.
+
+没有官方机器可读用量时，只接受用户在本次运行提供的 `/usage` 快照。插件不读取浏览器会话、Cookie 或非公开账户接口。每个波次都重新计算 `daily_headroom = 25% - today_used_percent`，快照缺失、周期不匹配或过期时默认拒绝。
+
+Without official machine-readable usage, the plugin accepts only a `/usage` snapshot supplied during the current run. It does not inspect browser sessions, cookies, or private account endpoints. Every wave recalculates `daily_headroom = 25% - today_used_percent` and denies by default for a missing, mismatched, or stale snapshot.
+
+纯函数判定器位于 `scripts/autopilot_quota_router.py`，只返回 `ALLOW`、`AWAITING_APPROVAL` 或 `PARTIAL_BLOCKED`。生产 CLI 使用系统 UTC 时间，并从独立参数读取当前额度周期，不信任路由 JSON 内伪造的运行时字段，防止旧快照或旧授权重放。`dispatch_wave()` 是唯一 worker 调度入口，CLI 只为 `ALLOW` 决策输出 `launch_results`。混合 Spark 波次可输出合格 Batch，但顶层保持 `PARTIAL_BLOCKED`，禁止完整门禁和交付。主流程只能把该清单交给 Codex 原生 Agent 工具。并行波次默认不超过 3 个 worker，CLI 会校验真实 Git 根目录、common directory 和分支，要求 linked worktree 属于同一协调仓库，消解符号链接与 macOS 路径别名，并把文件所有权规范成仓库相对路径后检查隔离冲突。
+
+The pure router lives in `scripts/autopilot_quota_router.py` and returns only `ALLOW`, `AWAITING_APPROVAL`, or `PARTIAL_BLOCKED`. The production CLI uses the system UTC clock and a separate current-period argument, ignoring forged runtime fields in route JSON to prevent replay. `dispatch_wave()` is the sole worker dispatch entry, and the CLI emits `launch_results` only for `ALLOW` decisions. A mixed Spark wave may emit eligible Batches while remaining top-level `PARTIAL_BLOCKED`, which blocks the full gate and delivery. The main flow may pass only that manifest to the Codex native Agent tool. A parallel wave has at most 3 workers after real Git root, common-directory and branch checks, linked-worktree repository identity enforcement, symbolic-link and macOS path resolution, repository-relative ownership normalization, and structured runtime-resource conflict checks.
+
 ---
 
 ## 在 Claude Code 项目里安装
@@ -129,6 +143,11 @@ codex plugin add hank-dev@amazing-dev-skills
 ## 验证清单
 
 新增/修改技能后，在任意一个已启用 `hank-dev` 的项目里过一遍：
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s plugins/hank-dev/tests -v
+python3 plugins/hank-dev/scripts/validate-distribution.py
+```
 
 ```bash
 /plugin marketplace update amazing-dev-skills

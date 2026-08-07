@@ -1,6 +1,6 @@
 {
   "name": "hank-dev",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Personal dev pipeline: feat (plan) -> autopilot (build) -> worktree-dev (isolation), plus resume-tailor and multi-agent review",
   "author": { "name": "Hank" },
   "skills": [

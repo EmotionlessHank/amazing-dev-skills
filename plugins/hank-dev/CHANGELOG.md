@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.6
+
+- `feat` 现在要求每个 Batch 记录 reasoning effort、工程依据、Spark 资格、依赖、文件所有权和运行时资源。`autopilot` 使用最新 `/usage` 快照和实时模型目录执行 Terra、Luna、Spark 配额门禁。
+- 新增默认拒绝的纯函数路由器与 27 项行为测试。CLI 可信时间和独立额度周期阻止旧快照与旧授权重放，真实 Git 根目录、common directory、分支和路径身份校验阻止跨仓与别名绕过。唯一 `dispatch_wave()` 入口只为 `ALLOW` 决策生成原生 Agent 启动清单，混合 Spark 波次保持部分阻塞语义。
+- `feat` now records reasoning effort, engineering evidence, Spark eligibility, dependencies, file ownership, and runtime resources for every Batch. `autopilot` applies Terra, Luna, and Spark quota gates from a fresh `/usage` snapshot and live model catalog.
+- Added a default-deny pure router with 27 behavior tests. CLI-generated trusted time and an independent quota-period argument block replay of old snapshots and approvals. Real Git root, common-directory, branch, and path identity checks block cross-repository and alias bypasses. The sole `dispatch_wave()` entry generates native Agent launch manifests only for `ALLOW` decisions while preserving partial-block semantics for mixed Spark waves.
+
 ## 0.2.5
 
 - `feat` 的 Phase 3.1 现明确绑定 Codex 原生结构化提问，每轮只处理一个决策组，提供 2 到 3 个互斥选项、推荐项与理由，等待回复后将结论记录到 DD。流程图也展示了原生提问、等待回答和写入 DD 的路径。

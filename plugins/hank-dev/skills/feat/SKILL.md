@@ -1,7 +1,7 @@
 ---
 name: feat
 description: 'Full lifecycle for the "planning phase" of feature development. Triggers when the user says "/feat", "develop feature", "add feature", "implement XX feature", "write a plan", "write DD", "grill me", or "stress test this plan". Workflow: requirement scope analysis → real codebase research (code is ground truth · pull latest · read-only server verification when needed) → best-practice research gate (large-risk, no-internal-precedent features only: 3 parallel source-audited agents survey official/real-world/failure-case angles) → grill/clarification gate (walk the design tree branch-by-branch, escalate only genuine ambiguities code can''t answer) → collaborative DD plan authoring → 1–3 review agents based on risk level → main flow handles review findings → confirmation gate → hand off to autopilot for development. Solves five high-frequency problems: "forgot to create a branch/worktree", "assumed code behavior from training data", "silently picked one of several viable options without aligning with the human", "coded before plan was reviewed and confirmed", and "reinvented a novel capability from scratch instead of grounding it in audited industry best practice".'
-version: 2.3.0
+version: 2.4.0
 ---
 
 # /feat — Feature Development Planning Phase (Research → Plan → Review → Confirm)
@@ -268,6 +268,28 @@ Organize into a DD document, placed in the requirement subfolder `{DOCS_ROOT}/{t
 - **§7 Out of Scope**: explicitly list what this iteration does **not** address — the anti-scope-creep fence; anything deferred here is the boundary autopilot must not silently cross.
 
 > If multiple viable options exist and impact spans more than a single file → **list them explicitly for the human to choose** (this is exactly what the 3.1 grill is meant to surface); do not silently pick one.
+
+每个 Batch 必须写入以下可审计字段。Autopilot 只消费这些工程证据，不允许在运行时根据任务复杂度改写模型层级。
+
+Every Batch must include these auditable fields. Autopilot consumes this engineering evidence and must not change model tiers from task complexity at runtime.
+
+```text
+reasoning_effort: high | xhigh | max
+effort_basis: 可核对的工程依据
+spark_eligible: true | false
+spark_ineligibility_reasons: 仅在 false 时填写
+depends_on: 前置 Batch ID 列表
+owned_files: 本 Batch 独占文件列表
+runtime_resources: 端口、数据库、测试服务、生成物和锁文件列表
+```
+
+effort 判定规则：`high` 用于已有模式、单一职责、测试路径明确且无跨模块状态；`xhigh` 用于多文件协同、新增测试、边界条件或有限跨模块契约；`max` 用于并发或时序、认证或资金、数据迁移、不可逆操作、跨仓契约或实质方案不确定性。
+
+Effort rules: use `high` for an established pattern with one responsibility, a clear test path, and no cross-module state; use `xhigh` for multi-file coordination, new tests, boundary conditions, or a limited cross-module contract; use `max` for concurrency or timing, authentication or funds, data migration, irreversible operations, cross-repository contracts, or material design uncertainty.
+
+`spark_eligible: true` 只适用于独立、测试边界明确、无迁移、无认证或支付、无跨模块状态修改的 Batch。其他 Batch 必须写入具体不符合原因，不得留空。
+
+Set `spark_eligible: true` only for an independent Batch with a clear test boundary, no migration, no authentication or payment work, and no cross-module state changes. Every ineligible Batch must record concrete reasons.
 
 ---
 

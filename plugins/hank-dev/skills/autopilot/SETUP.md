@@ -36,17 +36,38 @@ Subagent types used in Phase 2 (project must provide these or equivalent substit
 
 > Note: feat uses plan-review perspective agents (critic/architect/design-distiller); autopilot uses code-review perspective agents (code-reviewer/quality-scanner). **They are not interchangeable.**
 
+## Quota-Aware Routing Inputs
+
+迁移后的 Autopilot 必须保留 `scripts/autopilot_quota_router.py` 和唯一 `dispatch_wave()` 调度入口。调用方在每个波次提供以下输入：
+
+- 本次运行 ID 和 Batch 元数据
+- 同一额度周期的最新 `/usage` 快照，只包含快照周期、快照时间、周剩余和当天已用
+- 当前额度周期通过独立 CLI 参数提供，当前时间由 CLI 使用系统 UTC 时间生成，路由 JSON 内的 `runtime` 不受信
+- 实时模型目录中的 Terra、Luna、Spark 模型 ID、可用状态和 reasoning effort
+- Luna 或 Spark 的本次运行授权，包含额度周期、Batch 集合、有效期和原始授权文本
+- 波次 Batch ID、已完成依赖、独立 worktree、独立分支、文件所有权和运行时资源
+
+The migrated Autopilot must retain `scripts/autopilot_quota_router.py` and the sole `dispatch_wave()` entry. For each wave, provide the run ID, Batch metadata, a fresh `/usage` snapshot, the current quota period as a separate CLI argument, the live model catalog, run-scoped Luna or Spark authorization when required, completed dependencies, isolated worktrees and branches, file ownership, and runtime resources. The CLI generates current time from the system UTC clock and does not trust `runtime` fields from route JSON.
+
+插件不得抓取浏览器会话、Cookie 或非公开账户接口。没有官方机器可读用量时，只接受用户在本次运行提供的 `/usage` 快照。任何缺失、过期或不匹配输入都必须默认拒绝，worker 启动次数为零。主流程必须执行 `python3 scripts/autopilot_quota_router.py --input {ROUTE_REQUEST_FILE} --current-period-id {CURRENT_PERIOD_ID}`。退出码 0 时，只把 `launch_results` 交给 Codex 原生 Agent 工具。顶层 `PARTIAL_BLOCKED` 只允许执行清单中的合格 Batch，并禁止完整门禁、Review、归档和验收。非零退出码必须保持零次 Agent 调用。CLI 还必须校验真实 Git 根目录、common directory 和当前分支，要求同一波次的 linked worktree 属于同一协调仓库，消解符号链接与 macOS 路径别名，并把文件所有权规范成仓库相对路径。
+
+The plugin must not inspect browser sessions, cookies, or private account endpoints. Without official machine-readable usage, accept only a `/usage` snapshot supplied during the current run. Missing, stale, or mismatched inputs must deny by default and start zero workers. Run the router CLI with `--current-period-id {CURRENT_PERIOD_ID}`. On exit code 0, pass only `launch_results` to the Codex native Agent tool. Top-level `PARTIAL_BLOCKED` permits only the eligible listed Batches and blocks the full gate, Review, archive, and acceptance. A nonzero exit must produce zero Agent calls. The CLI also verifies the real Git root, common directory, and branch, requires linked worktrees in one wave to share a coordinating repository, resolves symbolic links and macOS path aliases, and normalizes ownership to repository-relative paths.
+
 ## Optional Modules (trim per project)
 
-- No UI/design workflow → delete §0.4 UI detection + §1.2 Step 1.5
+- No UI/design workflow → delete §0.4 UI detection + §1.3 Step 1.5
 - No lessons learned document → delete §0.3
-- No asset index script → delete the `{GEN_ASSETS}` line in §1.3
+- No asset index script → delete the `{GEN_ASSETS}` line in §1.4
 - Not using worktree → simplify §4.2 cleanup to in-branch commits, delete "sync docs back to main workspace"
-- **No test infrastructure** (early prototype / pure static site) → §1.2 Step 2 falls back to `{TYPECHECK}` only; delete `{TEST}` from §1.3; declare "this project has no automated tests — all acceptance is manual" in ACCEPTANCE.md
+- **No test infrastructure** (early prototype / pure static site) → §1.3 Step 2 falls back to `{TYPECHECK}` only; delete `{TEST}` from §1.4; declare "this project has no automated tests; all acceptance is manual" in ACCEPTANCE.md
 - No output hook report-swallowing issue → delete the `{SUBAGENT_TRANSCRIPT}` recovery fallback sentence in §2.2 item 6
 
 ## Verification
 
 1. All placeholders replaced (`grep -n "{.*}" SKILL.md` should only show indicative runtime quantities like `{ID}`/`{platform}`, no unresolved config placeholders)
-2. Run through an existing requirement end-to-end: confirm Phase 1 ran relevant tests per batch, Phase 2 truly spawned 1–3 subagents that each wrote their own REV file, Phase 4 produced all three artifacts and surfaced the acceptance checklist in the conversation
-3. Confirm the cleanup step **did not auto-push/merge to remote**
+2. Run the executable router tests:
+
+   `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s plugins/hank-dev/tests -v`
+
+3. Run through an existing requirement end-to-end: confirm Phase 1 refreshed the snapshot before every wave, only `ALLOW` decisions reached the fake or real launcher, Phase 2 truly spawned 1–3 subagents that each wrote their own REV file, and Phase 4 produced all three artifacts and surfaced the acceptance checklist in the conversation
+4. Confirm the cleanup step **did not auto-push/merge to remote**

@@ -151,7 +151,7 @@ For the update workflow, how to add a new skill to the plugin, and the verificat
 
 | Skill | Description |
 |-------|-------------|
-| [mac-cleanup](./mac-cleanup) | macOS system cleanup audit: scans for long-unused applications, redundant Homebrew/npm/pip packages, system caches, Xcode DerivedData. Outputs a risk-rated report with space estimates; waits for confirmation before deleting. |
+| [mac-cleanup](./mac-cleanup) | macOS 清理审计，先扫描并区分可重建缓存、应用数据和 Docker 资源，再按精确目标确认、逐项核验与报告真实回收空间。 |
 | [disk-cleanup](./disk-cleanup) | Developer storage cleanup (complements mac-cleanup, which handles system-level apps). Four-phase process: tiered investigation → per-category safety checks → cleanup → `df` verification. Includes hard-won lessons from worktree orphan detection and Docker sparse-file reclamation. |
 | [worktree-cleanup](./worktree-cleanup) | Conservative weekly Git worktree audit for macOS: scans linked worktrees under a configured root, reports candidates only after strict safety gates and a 14-day merged-observation window, optionally sends a Telegram report through an SSH relay, and removes linked worktrees only through explicit single-path approval. |
 | [headless-web-deploy](./headless-web-deploy) | Deploys small web apps (Flask/FastAPI/Node/static) to a domain-less server via Caddy + sslip.io (auto Let's Encrypt), systemd user service, and HMAC token auth. Produces a shareable HTTPS URL. Includes RUNBOOK, Caddyfile, systemd unit, and token auth templates. |

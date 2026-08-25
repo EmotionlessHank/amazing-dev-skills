@@ -100,7 +100,7 @@ runner 直接解析 `dsh --profile headless` 的纯文本输出（不是 JSONL �
 3. 输出为空。
 4. 文本只表示拒绝执行，没有实际 finding。
 
-runner 启动前用 `shutil.which("dsh")` 解析出绝对路径再调用，不依赖子进程环境里的 `PATH` 按裸命令名查找，防止 `PATH` 被篡改后执行非预期程序并拿到 `DEEPSEEK_API_KEY`。
+runner 启动前用 `shutil.which("dsh")` 解析出绝对路径，并校验该文件属主是当前用户且不允许 group/other 写入才使用；两者任一不满足都失败关闭（`dsh_untrusted_binary`）。这只挡得住"PATH 里更早的目录被放了一个 group/other 可写或非本用户拥有的同名文件"这类经典 PATH 投毒，防不住调用账户本身已经被攻破的情形，也不做二进制签名或哈希校验。
 
 ## Step 4：整合与对抗验证
 

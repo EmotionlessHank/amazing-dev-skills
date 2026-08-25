@@ -20,24 +20,24 @@ DeepSeek 是外部模型服务。prompt 包含本地源码、私有数据、个�
 
 ## 最小权限契约
 
-每次调用都通过同目录的 `scripts/run-dsh-delegate.py` 新建空临时目录，把任务文本写入其中的 `task.md`，再在该目录运行 `dsh --profile headless`。
+每次调用都通过插件共享脚本目录（跟 `review` 一样，不在本技能自己的目录下）的 `scripts/run-dsh-delegate.py` 新建空临时目录，把任务文本写入其中的 `task.md`，再在该目录运行 `dsh --profile headless`。
 
 ```bash
-skill_root="<根据当前 SKILL.md 绝对路径解析的 Skill 根目录>"
+plugin_root="<根据当前 SKILL.md 绝对路径解析的插件根目录>"
 HANK_DEEPSEEK_OUTBOUND_APPROVED=1 \
-  "$skill_root/scripts/run-dsh-delegate.py" "$task_prompt"
+  "$plugin_root/scripts/run-dsh-delegate.py" "$task_prompt"
 ```
 
 大段任务文本（例如需要整段粘贴的请求文件）改用 `--prompt-file`：
 
 ```bash
 HANK_DEEPSEEK_OUTBOUND_APPROVED=1 \
-  "$skill_root/scripts/run-dsh-delegate.py" --prompt-file "$request_file"
+  "$plugin_root/scripts/run-dsh-delegate.py" --prompt-file "$request_file"
 ```
 
 环境变量只表示用户已经明确授权本次外发，不能跨轮次复用。runner 从进入委派流程起执行 120 秒整体超时，并捕获标准输出、标准错误和退出码。禁止添加任何自动审批参数。
 
-runner 以 `DSH_PERMISSION_MODE=read-only` 调用 `dsh --profile headless`：该模式下写入与执行会被沙箱拒绝且无审批通道可逃逸。读取权限是按整个工作目录授予的——工作目录（临时隔离目录）里只放了 `task.md` 和两个全新的隔离 `home`/`DSH_HOME` 子目录，模型能读到的本地内容仅限于此。这与旧版基于 OpenCode 单文件权限对象的"零工具"设计不同：dsh 没有等价的逐文件读取白名单，只有整目录粒度的读/写开关，因此这里授予的是"只能读这一个临时目录"，不是"完全不能用任何工具"，是已知并接受的取舍。runner 使用隔离的 HOME 与全新的 `DSH_HOME`，只显式传入 `DEEPSEEK_API_KEY`，不继承其余环境变量。runner 启动前用 `shutil.which("dsh")` 解析出绝对路径再调用，不依赖子进程环境里的 `PATH` 按裸命令名查找，防止 `PATH` 被篡改后执行非预期程序并拿到 `DEEPSEEK_API_KEY`。
+runner 以 `DSH_PERMISSION_MODE=read-only` 调用 `dsh --profile headless`：该模式下写入与执行会被沙箱拒绝且无审批通道可逃逸。读取权限是按整个工作目录授予的——工作目录（临时隔离目录）里只放了 `task.md` 和两个全新的隔离 `home`/`DSH_HOME` 子目录，模型能读到的本地内容仅限于此。这与旧版基于 OpenCode 单文件权限对象的"零工具"设计不同：dsh 没有等价的逐文件读取白名单，只有整目录粒度的读/写开关，因此这里授予的是"只能读这一个临时目录"，不是"完全不能用任何工具"，是已知并接受的取舍。runner 使用隔离的 HOME 与全新的 `DSH_HOME`，只显式传入 `DEEPSEEK_API_KEY`，不继承其余环境变量。runner 启动前用 `shutil.which("dsh")` 解析出绝对路径，并校验该文件属主是当前用户且不允许 group/other 写入才使用；两者任一不满足都失败关闭（`dsh_untrusted_binary`）。这只挡得住"PATH 里更早的目录被放了一个 group/other 可写或非本用户拥有的同名文件"这类经典 PATH 投毒，防不住调用账户本身已经被攻破的情形，也不做二进制签名或哈希校验。
 
 临时目录清理前必须确认路径由本次 `mkdtemp` 返回，且路径位于 `${TMPDIR:-/tmp}` 下。不得在 `$HOME`、项目根目录或其他已有目录中运行委派。
 

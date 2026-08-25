@@ -60,6 +60,8 @@ for required in \
   'outbound_consent_missing' \
   'shutil.which("dsh")' \
   'dsh_not_found' \
+  'dsh_untrusted_binary' \
+  '_resolve_trusted_dsh' \
   'DSH_PERMISSION_MODE' \
   'DSH_HOME' \
   'DEEPSEEK_API_KEY' \
@@ -171,6 +173,28 @@ with tempfile.TemporaryDirectory() as temp_root:
                 assert exc.category == "dsh_not_found"
             else:
                 raise AssertionError("dsh 缺失必须失败关闭")
+        assert not list(Path(temp_root).glob("hank-review.*"))
+
+        fake_bin = Path(temp_root) / "untrusted-bin"
+        fake_bin.mkdir()
+        fake_dsh = fake_bin / "dsh"
+        fake_dsh.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+        fake_dsh.chmod(0o777)
+        original_path = os.environ.get("PATH")
+        os.environ["PATH"] = str(fake_bin) + os.pathsep + (original_path or os.defpath)
+        try:
+            with mock.patch.object(module.subprocess, "run", side_effect=scan_only_run):
+                try:
+                    module.run_review(patch)
+                except module.ResultError as exc:
+                    assert exc.category == "dsh_untrusted_binary"
+                else:
+                    raise AssertionError("group/other 可写的 dsh 候选必须失败关闭")
+        finally:
+            if original_path is None:
+                os.environ.pop("PATH", None)
+            else:
+                os.environ["PATH"] = original_path
         assert not list(Path(temp_root).glob("hank-review.*"))
     finally:
         for key, value in original_env.items():

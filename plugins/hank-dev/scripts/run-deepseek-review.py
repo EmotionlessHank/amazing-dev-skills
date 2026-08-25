@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -111,6 +112,22 @@ def _copy_bounded(source: Path, target: Path, deadline: float) -> None:
             target_file.write(chunk)
 
 
+def _resolve_trusted_dsh() -> str:
+    """解析 dsh 绝对路径，并拒绝任何非当前用户独占、group/other 可写的候选。
+
+    这不能防御一个已经被攻破的账户，只能挡住"PATH 里更早的目录被人放了一个
+    group/other 可写或非本用户拥有的同名文件"这类经典 PATH 投毒。
+    """
+
+    resolved = shutil.which("dsh")
+    if resolved is None:
+        raise ResultError("dsh_not_found")
+    info = os.stat(resolved)
+    if info.st_uid != os.geteuid() or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        raise ResultError("dsh_untrusted_binary")
+    return resolved
+
+
 def _isolated_environment(scratch: Path) -> dict[str, str]:
     child_env = {
         key: value
@@ -164,9 +181,7 @@ def run_review(patch_path: Path) -> str:
             raise ResultError("timeout") from exc
         if scan.returncode != 0:
             raise ResultError("sensitive_scan_blocked")
-        dsh_bin = shutil.which("dsh")
-        if dsh_bin is None:
-            raise ResultError("dsh_not_found")
+        dsh_bin = _resolve_trusted_dsh()
         child_env = _isolated_environment(scratch)
         try:
             completed = subprocess.run(

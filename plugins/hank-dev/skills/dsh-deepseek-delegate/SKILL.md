@@ -8,6 +8,10 @@ version: 1.0.0
 
 <!-- HANK_DELEGATE_SECURITY_CONTRACT_V1 -->
 
+## 个人技能库镶镜副本
+
+本插件内的脚本共享路径是 `plugins/hank-dev/scripts/run-dsh-delegate.py`（跟 `review` 一致，不在各技能自己的目录下）。但 `deepseek-developer` 技能硬编码引用的是个人技能库路径 `/Users/hang/.agents/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py`——这是一份**自包含的手动镜像**，把脚本复制进了该技能自己的 `scripts/` 子目录，故意不跟插件内的共享脚本布局一致。原因：`deepseek-developer` 需要一个不经过 plugin marketplace 机制、稳定不变的绝对路径。改动 `scripts/run-dsh-delegate.py` 后，必须手动把文件同步复制到 `~/.agents/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py` 和 `~/.claude/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py`，否则两处会漂移。
+
 ## 适用边界
 
 本 Skill 只处理能在 prompt 中一次说清的纯文本任务，例如摘要、翻译、候选方案和独立分析。它不允许读取调用者项目目录，也不参与 OMC 团队消息协议。

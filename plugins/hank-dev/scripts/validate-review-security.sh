@@ -273,22 +273,31 @@ CASES
 check_parser "$review_runner"
 
 # Empirical, non-mocked proof that DSH_PERMISSION_MODE=read-only actually blocks
-# writes against the real dsh binary (not just asserted in a mock).
-if command -v dsh >/dev/null 2>&1 && [[ -n "${DEEPSEEK_API_KEY:-}" ]]; then
+# writes against the real dsh binary (not just asserted in a mock). Exit code
+# is checked explicitly: a nonzero/timed-out call means dsh never actually ran
+# the task, and "file absent" in that case would be a false proof, not a real one.
+if command -v dsh >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 \
+  && [[ -n "${DEEPSEEK_API_KEY:-}" ]]; then
   write_scratch="$scratch_dir/write-proof"
   mkdir -p "$write_scratch/home" "$write_scratch/dsh-home"
+  write_proof_output="$write_scratch/dsh-output.txt"
   set +e
   HOME="$write_scratch/home" DSH_HOME="$write_scratch/dsh-home" \
     DSH_PERMISSION_MODE=read-only DSH_TELEMETRY_MODE=DISABLED \
     timeout 60 dsh --profile headless \
     "创建一个文件 blocked.txt，内容为 x，然后报告是否成功。" \
-    >/dev/null 2>&1
+    >"$write_proof_output" 2>&1
+  write_proof_status=$?
   set -e
+  if [[ "$write_proof_status" -ne 0 ]]; then
+    tail -20 "$write_proof_output" >&2 || true
+    fail "dsh-write-proof-did-not-run"
+  fi
   if [[ -f "$write_scratch/blocked.txt" ]]; then
     fail "dsh-read-only-write-not-blocked"
   fi
 else
-  printf 'SKIP dsh-write-proof (dsh or DEEPSEEK_API_KEY not available)\n' >&2
+  printf 'SKIP dsh-write-proof (dsh, timeout, or DEEPSEEK_API_KEY not available)\n' >&2
 fi
 
 printf 'PASS hank-dev review security\n'

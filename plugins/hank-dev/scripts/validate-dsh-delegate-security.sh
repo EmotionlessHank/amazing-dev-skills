@@ -10,6 +10,20 @@ fail() {
   exit 1
 }
 
+# deepseek-developer/SKILL.md hardcodes an absolute path into the personal-
+# library mirrors of this skill (see the mirror note in dsh-deepseek-delegate
+# /SKILL.md). Run scripts/sync-dsh-delegate-mirror.sh after editing either
+# canonical file; this check fails closed if the mirrors are missing or have
+# drifted, instead of relying on remembering to run the sync script.
+for mirror_root in "$HOME/.agents/skills/dsh-deepseek-delegate" "$HOME/.claude/skills/dsh-deepseek-delegate"; do
+  mirror_skill="$mirror_root/SKILL.md"
+  mirror_runner="$mirror_root/scripts/run-dsh-delegate.py"
+  [[ -f "$mirror_skill" ]] || fail "dsh-delegate-mirror-missing:$mirror_skill"
+  [[ -f "$mirror_runner" ]] || fail "dsh-delegate-mirror-missing:$mirror_runner"
+  cmp -s "$delegate_skill" "$mirror_skill" || fail "dsh-delegate-mirror-drifted:$mirror_skill"
+  cmp -s "$delegate_runner" "$mirror_runner" || fail "dsh-delegate-mirror-drifted:$mirror_runner"
+done
+
 forbidden_flag="$(printf '%s%s' '--' 'auto')"
 
 if grep -Fq -- "$forbidden_flag" "$delegate_skill"; then
@@ -248,7 +262,7 @@ if command -v dsh >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 \
   HOME="$write_scratch/home" DSH_HOME="$write_scratch/dsh-home" \
     DSH_PERMISSION_MODE=read-only DSH_TELEMETRY_MODE=DISABLED \
     timeout 60 dsh --profile headless \
-    "创建一个文件 blocked.txt，内容为 x，然后报告是否成功。" \
+    "创建一个文件 blocked.txt，内容为 x。报告成功与否，并把工具返回的原始报错文本逐字引用，不要转述或省略。" \
     >"$write_proof_output" 2>&1
   write_proof_status=$?
   set -e
@@ -258,6 +272,13 @@ if command -v dsh >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 \
   fi
   if [[ -f "$write_scratch/blocked.txt" ]]; then
     fail "dsh-read-only-write-not-blocked"
+  fi
+  # File absence alone doesn't prove the model actually attempted the write
+  # and got denied, as opposed to e.g. refusing the task outright. Require
+  # positive evidence: dsh's own sandbox denial text quoted back.
+  if ! grep -qi 'read-only' "$write_proof_output"; then
+    tail -20 "$write_proof_output" >&2 || true
+    fail "dsh-write-proof-inconclusive"
   fi
 else
   printf 'SKIP dsh-write-proof (dsh, timeout, or DEEPSEEK_API_KEY not available)\n' >&2

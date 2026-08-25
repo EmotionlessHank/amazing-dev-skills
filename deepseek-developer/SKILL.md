@@ -23,7 +23,7 @@ description: 受限 DeepSeek 外部补丁生成器。仅在用户明确指派时
 2. 只读取 allowlist 文件，人工检查其内容不含凭据、个人资料、生产配置、日志、数据库导出或未公开业务数据。
 3. 只把任务与验收标准写进临时任务说明文件，不得手工拼接源码。不要发送仓库、目录树、环境变量、Git 历史、`.env`、凭据或未在 allowlist 中的内容。
 4. 调用 `scripts/validate_outbound.py`，由它读取精确 allowlist 并确定性生成最终请求文件。任何拒绝都停止外发。
-5. 调用 `/Users/hang/.agents/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py`（这是该技能的自包含个人库镜像，不是 `plugins/hank-dev/scripts/` 里的插件共享脚本；两处需手动保持同步，见 `dsh-deepseek-delegate/SKILL.md` 的镜像说明）。它会创建临时 `HOME`/`DSH_HOME`，以 `DSH_PERMISSION_MODE=read-only` 运行 `dsh`（写入与执行被沙箱拒绝），完成后删除临时目录。
+5. 调用 `/Users/hang/.agents/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py`（这是该技能的自包含个人库镜像，不是 `plugins/hank-dev/scripts/` 里的插件共享脚本；用 `plugins/hank-dev/scripts/sync-dsh-delegate-mirror.sh` 保持同步，见 `dsh-deepseek-delegate/SKILL.md` 的镜像说明，`validate-dsh-delegate-security.sh` 会校验漂移）。它会创建临时 `HOME`/`DSH_HOME`，以 `DSH_PERMISSION_MODE=read-only` 运行 `dsh`（写入与执行被沙箱拒绝），完成后删除临时目录。
 6. 要求模型只返回 unified diff，不要 Markdown、解释、命令或新增文件。将原始输出直接管道给 `scripts/validate_patch.py`。任何拒绝都不得应用补丁。
 7. 主模型逐行审查已验证 diff 的语义后，再通过 `apply_patch` 应用到隔离 worktree。绝不对外部输出直接运行 `git apply` 或 `apply_patch`。
 8. 运行目标测试和静态检查，再由主模型进行独立审查。验证通过后才可合并或提交。

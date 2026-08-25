@@ -331,7 +331,7 @@ if command -v dsh >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 \
   HOME="$write_scratch/home" DSH_HOME="$write_scratch/dsh-home" \
     DSH_PERMISSION_MODE=read-only DSH_TELEMETRY_MODE=DISABLED \
     timeout 60 dsh --profile headless \
-    "创建一个文件 blocked.txt，内容为 x，然后报告是否成功。" \
+    "创建一个文件 blocked.txt，内容为 x。报告成功与否，并把工具返回的原始报错文本逐字引用，不要转述或省略。" \
     >"$write_proof_output" 2>&1
   write_proof_status=$?
   set -e
@@ -341,6 +341,13 @@ if command -v dsh >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 \
   fi
   if [[ -f "$write_scratch/blocked.txt" ]]; then
     fail "dsh-read-only-write-not-blocked"
+  fi
+  # File absence alone doesn't prove the model actually attempted the write
+  # and got denied, as opposed to e.g. refusing the task outright. Require
+  # positive evidence: dsh's own sandbox denial text quoted back.
+  if ! grep -qi 'read-only' "$write_proof_output"; then
+    tail -20 "$write_proof_output" >&2 || true
+    fail "dsh-write-proof-inconclusive"
   fi
 else
   printf 'SKIP dsh-write-proof (dsh, timeout, or DEEPSEEK_API_KEY not available)\n' >&2

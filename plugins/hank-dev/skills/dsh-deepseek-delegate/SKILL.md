@@ -10,7 +10,7 @@ version: 1.0.0
 
 ## 个人技能库镶镜副本
 
-本插件内的脚本共享路径是 `plugins/hank-dev/scripts/run-dsh-delegate.py`（跟 `review` 一致，不在各技能自己的目录下）。但 `deepseek-developer` 技能硬编码引用的是个人技能库路径 `/Users/hang/.agents/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py`——这是一份**自包含的手动镜像**，把脚本复制进了该技能自己的 `scripts/` 子目录，故意不跟插件内的共享脚本布局一致。原因：`deepseek-developer` 需要一个不经过 plugin marketplace 机制、稳定不变的绝对路径。改动 `scripts/run-dsh-delegate.py` 后，必须手动把文件同步复制到 `~/.agents/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py` 和 `~/.claude/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py`，否则两处会漂移。
+本插件内的脚本共享路径是 `plugins/hank-dev/scripts/run-dsh-delegate.py`（跟 `review` 一致，不在各技能自己的目录下）。但 `deepseek-developer` 技能硬编码引用的是个人技能库路径 `/Users/hang/.agents/skills/dsh-deepseek-delegate/scripts/run-dsh-delegate.py`——这是一份**自包含的手动镜像**，把脚本复制进了该技能自己的 `scripts/` 子目录，故意不跟插件内的共享脚本布局一致。原因：`deepseek-developer` 需要一个不经过 plugin marketplace 机制、稳定不变的绝对路径。改动 `SKILL.md` 或 `scripts/run-dsh-delegate.py` 后，运行 `plugins/hank-dev/scripts/sync-dsh-delegate-mirror.sh` 把两份文件同步复制到 `~/.agents/skills/dsh-deepseek-delegate/` 和 `~/.claude/skills/dsh-deepseek-delegate/`。`scripts/validate-dsh-delegate-security.sh` 会检查这两处镜像是否存在且与插件内的源文件逐字节一致，漂移或缺失都直接失败关闭，不依赖"记得手动同步"。
 
 ## 适用边界
 

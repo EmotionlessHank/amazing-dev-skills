@@ -1,12 +1,12 @@
 ---
 name: review
 description: 多代理 code review，按 diff 复杂度判定编排规模，并在用户明确授权外发且敏感扫描通过时加入一次 DeepSeek 独立复核。触发词包括 "/hank-dev:review"、"hank-dev review"、"多代理 review" 和 "team review 一下这个改动"。
-version: 1.1.0
+version: 1.2.0
 ---
 
 # hank-dev:review
 
-<!-- HANK_REVIEW_SECURITY_CONTRACT_V2 -->
+<!-- HANK_REVIEW_SECURITY_CONTRACT_V3 -->
 
 审查对象默认是当前分支相对 main 的 diff。用户也可以指定 PR 或 commit range。
 
@@ -78,7 +78,7 @@ flowchart TD
 7. 扫描输出只包含规则编号、文件、行号和计数，不得输出命中内容、截断值或哈希。
 8. 任一规则命中时不得调用外部模型，报告“DeepSeek 复核缺失，敏感信息门禁阻止外发”。
 
-### 3.2 OpenCode 权限
+### 3.2 dsh 权限
 
 ```bash
 review_patch_file="<本次待审 patch 的绝对路径>"
@@ -87,22 +87,17 @@ HANK_DEEPSEEK_OUTBOUND_APPROVED=1 \
   "$plugin_root/scripts/run-deepseek-review.py" "$review_patch_file"
 ```
 
-环境变量只表示用户已经明确授权本次外发，不能跨轮次复用。runner 从输入复制开始执行 120 秒整体超时，并捕获标准输出、标准错误和退出码。禁止添加任何自动审批参数。read 规则先拒绝全部路径，再允许当前隔离目录中的临时 `review-input.patch`。同名外部文件由 external_directory 规则拒绝。其他工具默认拒绝。runner 使用隔离的 HOME 与 XDG 目录，禁用 Claude 兼容规则和默认插件，只把 DeepSeek provider、模型与最小权限配置传入子进程。
+环境变量只表示用户已经明确授权本次外发，不能跨轮次复用。runner 从输入复制开始执行 120 秒整体超时，并捕获标准输出、标准错误和退出码。禁止添加任何自动审批参数。runner 以 `DSH_PERMISSION_MODE=read-only` 调用 `dsh --profile headless`：该模式下写入与执行会被沙箱拒绝且无审批通道可逃逸（已用真实调用验证：命令仍成功退出并给出报告，但目标文件确认未被创建）。读取权限是按整个工作目录授予的，不是单文件白名单——工作目录（临时隔离目录）里只放了 `review-input.patch` 和两个全新的隔离 `home`/`DSH_HOME` 子目录，模型能读到的本地内容仅限于此；相比旧版 OpenCode 的单文件读取白名单，这是更粗粒度的边界，是已知并接受的取舍，不是遗漏。runner 使用隔离的 HOME 与全新的 `DSH_HOME`，只显式传入 `DEEPSEEK_API_KEY`，不继承其余环境变量。
 
 runner 清理临时目录前验证它由本次调用创建，且直接位于 `${TMPDIR:-/tmp}` 下。
 
 ### 3.3 结果判定
 
-runner 逐行解析 OpenCode JSONL。以下任一情况都判为 DeepSeek 复核失败：
+runner 直接解析 `dsh --profile headless` 的纯文本输出（不是 JSONL 事件流）。以下任一情况都判为 DeepSeek 复核失败：
 
 1. 非零退出码或超时。
-2. permission denied。
-3. agent fallback。
-4. error 事件。
-5. JSONL 解析失败。
-6. 没有 text 事件或文本为空。
-7. 文本只表示拒绝执行，没有实际 finding。
-8. 出现任何非 JSON 输出或意外工具调用事件。
+2. 输出为空。
+3. 文本只表示拒绝执行，没有实际 finding。
 
 ## Step 4：整合与对抗验证
 

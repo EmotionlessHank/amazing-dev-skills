@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.7
+
+- `review` 的 DeepSeek 复核改用 `dsh --profile headless` 调用，不再经过 OpenCode/OpenRouter。沙箱从单文件读取白名单变为 `DSH_PERMISSION_MODE=read-only`（工作目录整体粒度、写入与执行被拒绝），已用真实调用验证。安全契约标记升级到 V3。
+- `review`'s DeepSeek pass now calls `dsh --profile headless` directly instead of going through OpenCode/OpenRouter. The sandbox moved from a single-file read allowlist to `DSH_PERMISSION_MODE=read-only` (workspace-directory granularity; writes and exec are denied), verified against the real binary. Security contract marker bumped to V3.
+- 新增 `dsh-deepseek-delegate` skill，取代已移除的 `opencode-deepseek-delegate`：同样的纯文本委派契约（无项目文件访问、显式外发授权、失败关闭），改用 `dsh` 而非 `opencode`，并支持 `--prompt-file` 传入大段任务文本。
+- Added the `dsh-deepseek-delegate` skill, replacing the removed `opencode-deepseek-delegate`: same pure-text delegation contract (no project file access, explicit outbound consent, fail-closed), built on `dsh` instead of `opencode`, with `--prompt-file` support for longer task text.
+
 ## 0.2.6
 
 - `feat` 现在要求每个 Batch 记录 reasoning effort、工程依据、Spark 资格、依赖、文件所有权和运行时资源。`autopilot` 使用最新 `/usage` 快照和实时模型目录执行 Terra、Luna、Spark 配额门禁。

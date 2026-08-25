@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""以最小权限执行 DeepSeek 单文件审查，通过 dsh headless profile 调用。"""
+"""以无工具权限执行纯文本 DeepSeek 委派，通过 dsh headless profile 调用。"""
 
 from __future__ import annotations
 
@@ -15,13 +15,12 @@ from pathlib import Path
 
 
 TIMEOUT_SECONDS = 120
-MAX_PATCH_BYTES = 2 * 1024 * 1024
+MAX_PROMPT_BYTES = 2 * 1024 * 1024
 CONSENT_ENV = "HANK_DEEPSEEK_OUTBOUND_APPROVED"
 API_KEY_ENV = "DEEPSEEK_API_KEY"
-PROMPT = (
-    "只读当前目录的 review-input.patch。审查 bug、边界条件和简化复用空间。"
-    "禁止修改文件，禁止执行命令。每条 finding 包含文件、行号、触发场景、"
-    "严重程度、置信度和证据。"
+TASK_PROMPT = (
+    "只读当前目录的 task.md，完成其中描述的任务，直接给出结果。"
+    "禁止修改文件，禁止执行命令。"
 )
 SAFE_ENV_KEYS = (
     "LANG",
@@ -47,7 +46,7 @@ REFUSAL_MARKERS = (
 
 
 class ResultError(Exception):
-    """表示外部复核结果不可采信。"""
+    """表示外部委派结果不可采信。"""
 
     def __init__(self, category: str):
         super().__init__(category)
@@ -79,10 +78,18 @@ def _load_fixture(path: Path) -> tuple[str, str, int]:
     )
 
 
+def _read_bounded_prompt_file(path: Path) -> str:
+    with path.open("rb") as prompt_file:
+        raw = prompt_file.read(MAX_PROMPT_BYTES + 1)
+    if len(raw) > MAX_PROMPT_BYTES:
+        raise ResultError("input_too_large")
+    return raw.decode("utf-8")
+
+
 def _safe_cleanup(path: Path, temp_root: Path) -> None:
     resolved = path.resolve()
     root = temp_root.resolve()
-    if resolved.parent != root or not resolved.name.startswith("hank-review."):
+    if resolved.parent != root or not resolved.name.startswith("deepseek-delegate."):
         raise RuntimeError("拒绝清理未验证的临时目录")
     shutil.rmtree(resolved)
 
@@ -92,21 +99,6 @@ def _remaining(deadline: float) -> float:
     if remaining <= 0:
         raise ResultError("timeout")
     return remaining
-
-
-def _copy_bounded(source: Path, target: Path, deadline: float) -> None:
-    total = 0
-    with source.open("rb") as source_file, target.open("xb") as target_file:
-        target.chmod(0o600)
-        while True:
-            _remaining(deadline)
-            chunk = source_file.read(min(64 * 1024, MAX_PATCH_BYTES + 1 - total))
-            if not chunk:
-                break
-            total += len(chunk)
-            if total > MAX_PATCH_BYTES:
-                raise ResultError("input_too_large")
-            target_file.write(chunk)
 
 
 def _isolated_environment(scratch: Path) -> dict[str, str]:
@@ -135,37 +127,25 @@ def _isolated_environment(scratch: Path) -> dict[str, str]:
     return child_env
 
 
-def run_review(patch_path: Path) -> str:
+def run_delegate(prompt: str) -> str:
     if os.environ.get(CONSENT_ENV) != "1":
         raise ResultError("outbound_consent_missing")
-    if not patch_path.is_file():
+    if not prompt.strip():
         raise ResultError("input_missing")
+    if len(prompt.encode("utf-8")) > MAX_PROMPT_BYTES:
+        raise ResultError("input_too_large")
 
     deadline = time.monotonic() + TIMEOUT_SECONDS
     temp_root = Path(os.environ.get("TMPDIR") or "/tmp")
-    scratch = Path(tempfile.mkdtemp(prefix="hank-review.", dir=temp_root))
+    scratch = Path(tempfile.mkdtemp(prefix="deepseek-delegate.", dir=temp_root))
     try:
-        target = scratch / "review-input.patch"
-        _copy_bounded(patch_path, target, deadline)
-        script_root = Path(__file__).resolve().parent
-        scanner = script_root / "check-review-patch.sh"
-        try:
-            scan = subprocess.run(
-                [str(scanner), str(target)],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=_remaining(deadline),
-                check=False,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise ResultError("timeout") from exc
-        if scan.returncode != 0:
-            raise ResultError("sensitive_scan_blocked")
+        task_file = scratch / "task.md"
+        task_file.write_text(prompt, encoding="utf-8")
+        task_file.chmod(0o600)
         child_env = _isolated_environment(scratch)
         try:
             completed = subprocess.run(
-                ["dsh", "--profile", "headless", PROMPT],
+                ["dsh", "--profile", "headless", TASK_PROMPT],
                 cwd=scratch,
                 env=child_env,
                 stdin=subprocess.DEVNULL,
@@ -183,7 +163,8 @@ def run_review(patch_path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("patch", nargs="?", type=Path)
+    parser.add_argument("prompt", nargs="?")
+    parser.add_argument("--prompt-file", type=Path)
     parser.add_argument("--parse-fixture", type=Path)
     args = parser.parse_args()
 
@@ -192,12 +173,18 @@ def main() -> int:
             stdout, stderr, returncode = _load_fixture(args.parse_fixture)
             result = parse_output(stdout, stderr, returncode)
         else:
-            if args.patch is None:
+            if args.prompt and args.prompt_file:
+                raise ValueError("prompt 与 --prompt-file 不能同时提供")
+            if args.prompt_file:
+                prompt_text = _read_bounded_prompt_file(args.prompt_file)
+            elif args.prompt:
+                prompt_text = args.prompt
+            else:
                 raise ResultError("input_missing")
-            result = run_review(args.patch.resolve())
+            result = run_delegate(prompt_text)
     except (ResultError, ValueError, OSError, RuntimeError, json.JSONDecodeError) as exc:
         category = exc.category if isinstance(exc, ResultError) else "runner_error"
-        print(f"DEEPSEEK_REVIEW_MISSING category:{category}", file=sys.stderr)
+        print(f"DEEPSEEK_DELEGATE_MISSING category:{category}", file=sys.stderr)
         return 1
 
     print(result)

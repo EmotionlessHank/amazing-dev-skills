@@ -4,3 +4,6 @@
 
 # Internal skill-review history (not part of the public library)
 .skill-review/
+
+# Python bytecode cache from running validator scripts locally
+__pycache__/

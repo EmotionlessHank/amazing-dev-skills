@@ -44,7 +44,10 @@ for required in \
   '"headless"' \
   'empty_output' \
   'refusal_only' \
+  'unexpected_stderr' \
   'outbound_consent_missing' \
+  'shutil.which("dsh")' \
+  'dsh_not_found' \
   'DSH_PERMISSION_MODE' \
   'DSH_HOME' \
   'DEEPSEEK_API_KEY' \
@@ -89,7 +92,8 @@ with tempfile.TemporaryDirectory() as temp_root:
 
     def timeout_run(args, **kwargs):
         calls.append((args, kwargs))
-        assert args == ["dsh", "--profile", "headless", module.TASK_PROMPT]
+        assert args[0] == module.shutil.which("dsh")
+        assert args[1:] == ["--profile", "headless", module.TASK_PROMPT]
         assert 0 < kwargs["timeout"] <= 120
         assert kwargs["stdin"] is subprocess.DEVNULL
         assert kwargs["capture_output"] is True
@@ -129,6 +133,16 @@ with tempfile.TemporaryDirectory() as temp_root:
                 raise AssertionError("超限 prompt 必须失败关闭")
         assert calls == []
         assert not list(Path(temp_root).glob("deepseek-delegate.*"))
+
+        with mock.patch.object(module.subprocess, "run", side_effect=AssertionError("不应启动子进程")), \
+             mock.patch.object(module.shutil, "which", return_value=None):
+            try:
+                module.run_delegate("安全的测试任务")
+            except module.ResultError as exc:
+                assert exc.category == "dsh_not_found"
+            else:
+                raise AssertionError("dsh 缺失必须失败关闭")
+        assert not list(Path(temp_root).glob("deepseek-delegate.*"))
     finally:
         for key, value in original_env.items():
             if value is None:
@@ -157,6 +171,9 @@ printf '%s\n' \
 printf '%s\n' \
   '{"stdout":"I cannot comply","stderr":"","returncode":0}' \
   > "$scratch_dir/refusal.json"
+printf '%s\n' \
+  '{"stdout":"委派完成","stderr":"permission requested","returncode":0}' \
+  > "$scratch_dir/stderr.json"
 
 "$delegate_runner" --parse-fixture "$scratch_dir/success.json" \
   | grep -Fq '委派完成' || fail "parser-success"
@@ -171,6 +188,7 @@ while IFS='|' read -r fixture category; do
 done <<'CASES'
 empty|empty_output
 refusal|refusal_only
+stderr|unexpected_stderr
 CASES
 
 set +e

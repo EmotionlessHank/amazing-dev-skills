@@ -58,6 +58,8 @@ def parse_output(stdout: str, stderr: str, returncode: int) -> str:
 
     if returncode != 0:
         raise ResultError("nonzero_exit")
+    if stderr.strip():
+        raise ResultError("unexpected_stderr")
     result = stdout.strip()
     if not result:
         raise ResultError("empty_output")
@@ -142,10 +144,13 @@ def run_delegate(prompt: str) -> str:
         task_file = scratch / "task.md"
         task_file.write_text(prompt, encoding="utf-8")
         task_file.chmod(0o600)
+        dsh_bin = shutil.which("dsh")
+        if dsh_bin is None:
+            raise ResultError("dsh_not_found")
         child_env = _isolated_environment(scratch)
         try:
             completed = subprocess.run(
-                ["dsh", "--profile", "headless", TASK_PROMPT],
+                [dsh_bin, "--profile", "headless", TASK_PROMPT],
                 cwd=scratch,
                 env=child_env,
                 stdin=subprocess.DEVNULL,

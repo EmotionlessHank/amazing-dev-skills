@@ -56,7 +56,10 @@ for required in \
   '"headless"' \
   'empty_output' \
   'refusal_only' \
+  'unexpected_stderr' \
   'outbound_consent_missing' \
+  'shutil.which("dsh")' \
+  'dsh_not_found' \
   'DSH_PERMISSION_MODE' \
   'DSH_HOME' \
   'DEEPSEEK_API_KEY' \
@@ -116,7 +119,8 @@ with tempfile.TemporaryDirectory() as temp_root:
             assert copied.parent.parent == Path(temp_root)
             assert copied.stat().st_mode & 0o777 == 0o600
             return subprocess.CompletedProcess(args, 0, "SCAN_PASS count:0\n", "")
-        assert args == ["dsh", "--profile", "headless", module.PROMPT]
+        assert args[0] == module.shutil.which("dsh")
+        assert args[1:] == ["--profile", "headless", module.PROMPT]
         assert 0 < kwargs["timeout"] <= calls[0][1]["timeout"] <= 120
         assert kwargs["stdin"] is subprocess.DEVNULL
         assert kwargs["capture_output"] is True
@@ -153,6 +157,20 @@ with tempfile.TemporaryDirectory() as temp_root:
             else:
                 raise AssertionError("超限输入必须失败关闭")
         assert calls == []
+        assert not list(Path(temp_root).glob("hank-review.*"))
+
+        def scan_only_run(args, **kwargs):
+            assert Path(args[0]).name == "check-review-patch.sh"
+            return subprocess.CompletedProcess(args, 0, "SCAN_PASS count:0\n", "")
+
+        with mock.patch.object(module.subprocess, "run", side_effect=scan_only_run), \
+             mock.patch.object(module.shutil, "which", return_value=None):
+            try:
+                module.run_review(patch)
+            except module.ResultError as exc:
+                assert exc.category == "dsh_not_found"
+            else:
+                raise AssertionError("dsh 缺失必须失败关闭")
         assert not list(Path(temp_root).glob("hank-review.*"))
     finally:
         for key, value in original_env.items():
@@ -236,6 +254,9 @@ printf '%s\n' \
 printf '%s\n' \
   '{"stdout":"I cannot comply","stderr":"","returncode":0}' \
   > "$scratch_dir/refusal.json"
+printf '%s\n' \
+  '{"stdout":"发现明确问题","stderr":"permission requested","returncode":0}' \
+  > "$scratch_dir/stderr.json"
 
 check_parser() {
   local runner="$1"
@@ -255,6 +276,7 @@ check_parser() {
   done <<'CASES'
 empty|empty_output
 refusal|refusal_only
+stderr|unexpected_stderr
 CASES
 
   set +e

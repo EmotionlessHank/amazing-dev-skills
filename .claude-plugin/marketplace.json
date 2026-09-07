@@ -7,7 +7,7 @@
     {
       "name": "hank-dev",
       "source": "./plugins/hank-dev",
-      "description": "Hank's personal dev plugin: feat/autopilot/worktree-dev pipeline + resume-tailor + multi-agent review"
+      "description": "Hank's personal dev plugin: feat/autopilot/worktree-dev pipeline + resume-tailor + multi-agent review + demo-video"
     }
   ]
 }

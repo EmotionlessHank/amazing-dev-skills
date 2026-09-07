@@ -11,6 +11,7 @@
 | worktree-dev | `/hank-dev:worktree-dev` | 强制 worktree 隔离开发：建分支、建 worktree、同步环境、锁定工作目录 |
 | resume-tailor | `/hank-dev:resume-tailor` | 简历/JD 定制流程：master CV 打磨、按 JD 定制、ATS/HR 双代理独立审查、diff 复核、归档 |
 | review | `/hank-dev:review` | 多代理 review：按 diff 规模自动判定单代理还是 team 编排。只有本次明确授权且敏感信息扫描通过时才执行独立 DeepSeek 复核，否则报告缺失原因。 |
+| demo-video | `/hank-dev:demo-video` | 把功能或 PR 录成带旁白的演示视频：先敲定分镜脚本，再截图、TTS 配音、ffmpeg 合成 MP4。默认本地 TTS 免 API key，未经要求不上传。 |
 
 `feat` / `autopilot` / `worktree-dev` 仍带 `{placeholder}`，是多项目模板，需要按各自的 `SETUP.md` 在项目侧覆盖定制内容（见下面「关于模板占位符」）。
 
@@ -69,7 +70,7 @@ The pure router lives in `scripts/autopilot_quota_router.py` and returns only `A
 
 全新项目、还没有本地定制版的，插件启用后拿到的是带 `{placeholder}` 的原始模板，不能直接用。要替换占位符，必须在该项目里新建 `.claude/skills/<name>/SKILL.md`（复制插件里对应技能的 `SKILL.md` 内容过去），照 `SETUP.md` 的替换表填好占位符，这份项目级文件才会覆盖插件里的中心版本生效；不要以为改一下就能就地生效。
 
-`resume-tailor` 和 `review` 没有占位符，是通用即用版本。
+`resume-tailor`、`review` 和 `demo-video` 没有占位符，是通用即用版本。
 
 ---
 

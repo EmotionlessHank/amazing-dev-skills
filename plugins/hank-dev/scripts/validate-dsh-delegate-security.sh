@@ -58,7 +58,7 @@ for required in \
   '"headless"' \
   'empty_output' \
   'refusal_only' \
-  'unexpected_stderr' \
+  'nonzero_exit' \
   'outbound_consent_missing' \
   'shutil.which("dsh")' \
   'dsh_not_found' \
@@ -210,11 +210,19 @@ printf '%s\n' \
   '{"stdout":"I cannot comply","stderr":"","returncode":0}' \
   > "$scratch_dir/refusal.json"
 printf '%s\n' \
-  '{"stdout":"委派完成","stderr":"permission requested","returncode":0}' \
-  > "$scratch_dir/stderr.json"
+  '{"stdout":"委派完成","stderr":"dsh: reasoning:\nthinking out loud","returncode":0}' \
+  > "$scratch_dir/reasoning.json"
+printf '%s\n' \
+  '{"stdout":"委派完成","stderr":"","returncode":1}' \
+  > "$scratch_dir/nonzero.json"
 
 "$delegate_runner" --parse-fixture "$scratch_dir/success.json" \
   | grep -Fq '委派完成' || fail "parser-success"
+
+# dsh --profile headless streams reasoning to stderr by design, so a non-empty
+# stderr on a zero exit must still parse as a usable result.
+"$delegate_runner" --parse-fixture "$scratch_dir/reasoning.json" \
+  | grep -Fq '委派完成' || fail "parser-reasoning-stderr-ignored"
 
 while IFS='|' read -r fixture category; do
   set +e
@@ -226,7 +234,7 @@ while IFS='|' read -r fixture category; do
 done <<'CASES'
 empty|empty_output
 refusal|refusal_only
-stderr|unexpected_stderr
+nonzero|nonzero_exit
 CASES
 
 set +e

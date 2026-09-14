@@ -55,12 +55,18 @@ class ResultError(Exception):
 
 
 def parse_output(stdout: str, stderr: str, returncode: int) -> str:
-    """把 dsh headless 的纯文本输出解析为结果，任何不确定状态都失败关闭。"""
+    """把 dsh headless 的纯文本输出解析为结果，任何不确定状态都失败关闭。
+
+    `stderr` 保留在签名里只为兼容 fixture 格式，不参与判定：`dsh --profile
+    headless` 的设计行为就是把 reasoning 流写到 stderr（见其 --help：stream
+    reasoning to stderr, print the final assistant message），成功调用的 stderr
+    必然非空。早期版本把"stderr 非空"当成不确定状态失败关闭，建立在"成功调用
+    stderr 为空"这个对 dsh 的错误假设上，会让每一次调用都失败。失败判定改由
+    退出码、空输出和纯拒绝文本三条承担。
+    """
 
     if returncode != 0:
         raise ResultError("nonzero_exit")
-    if stderr.strip():
-        raise ResultError("unexpected_stderr")
     result = stdout.strip()
     if not result:
         raise ResultError("empty_output")

@@ -46,9 +46,10 @@ runner 以 `DSH_PERMISSION_MODE=read-only` 调用 `dsh --profile headless`：该
 runner 直接解析 `dsh --profile headless` 的纯文本输出（不是 JSONL 事件流）。以下任一情况都判为失败：
 
 1. 非零退出码或超时。
-2. 标准错误非空（成功的 dsh 调用应该没有任何 stderr 输出；出现任何内容都按不确定状态失败关闭，不去猜测其含义）。
-3. 输出为空。
-4. 文本只表示拒绝执行，没有实际结果。
+2. 输出为空。
+3. 文本只表示拒绝执行，没有实际结果。
+
+标准错误不参与判定：`dsh --profile headless` 的设计行为就是把 reasoning 流写到 stderr（其 `--help` 原文：stream reasoning to stderr, print the final assistant message），成功调用的 stderr 必然非空。早前那条「stderr 非空即失败关闭」的规则建立在对 dsh 的错误假设上，会让每一次调用都失败，已移除。
 
 失败时必须向上游报告"DeepSeek 委派缺失"和具体类别，不能把失败文本当作模型结论。
 

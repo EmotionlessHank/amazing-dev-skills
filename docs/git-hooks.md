@@ -25,6 +25,18 @@ export AMAZING_DEV_SKILLS_AI_REVIEW_CMD=/absolute/path/to/your-ai-review-runner
 git push origin main
 ```
 
+### Bundled runner
+
+`scripts/ai-review-dsh.sh` is a ready-made runner that reviews the patch with DeepSeek through `dsh`:
+
+```bash
+export AMAZING_DEV_SKILLS_AI_REVIEW_CMD="$PWD/scripts/ai-review-dsh.sh"
+```
+
+It wraps `plugins/hank-dev/scripts/run-deepseek-review.py`, so the patch is scanned for credential-shaped content before anything leaves the machine, and the DeepSeek call runs in an isolated temp directory under a read-only sandbox. It needs `DEEPSEEK_API_KEY` exported in the environment the push inherits.
+
+Pointing the gate at this runner is a standing authorization to send every `main`-bound patch to the DeepSeek API. The runner fails the push when delegation fails at all, and when the review's closing `GATE:` line says `BLOCK` or is missing. Set `AMAZING_DEV_SKILLS_AI_REVIEW_ADVISORY=1` to keep the review but never block on its findings.
+
 The hook saves AI review artifacts under `.git/ai-review/`. These artifacts are local and are not committed.
 
 Note: GitHub does not execute client-side Git hooks during web merges. If GitHub itself must reject merges, configure branch protection and required status checks in the repository settings as the server-side enforcement layer.
@@ -53,6 +65,18 @@ bash scripts/setup-git-hooks.sh
 export AMAZING_DEV_SKILLS_AI_REVIEW_CMD=/absolute/path/to/your-ai-review-runner
 git push origin main
 ```
+
+### 自带 runner
+
+`scripts/ai-review-dsh.sh` 是仓库自带的 runner，通过 `dsh` 把 patch 交给 DeepSeek 审查：
+
+```bash
+export AMAZING_DEV_SKILLS_AI_REVIEW_CMD="$PWD/scripts/ai-review-dsh.sh"
+```
+
+它包的是 `plugins/hank-dev/scripts/run-deepseek-review.py`，所以 patch 在离开本机之前会先过一遍凭据形态扫描，DeepSeek 调用本身跑在隔离临时目录的只读沙箱里。它需要推送环境能继承到 `DEEPSEEK_API_KEY`。
+
+把门禁指向这个 runner，等于长期授权把每一个推往 `main` 的 patch 外发给 DeepSeek API。委派本身失败时 runner 一律拦截推送；审查有结论时，读报告最后那行 `GATE: PASS` / `GATE: BLOCK` 判定，`BLOCK` 或该行缺失都拦。设 `AMAZING_DEV_SKILLS_AI_REVIEW_ADVISORY=1` 可以保留审查但不因 finding 拦截。
 
 hook 会把 AI 审查产物保存到 `.git/ai-review/`。这些产物只保存在本地，不进入提交。
 

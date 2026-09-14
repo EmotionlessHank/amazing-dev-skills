@@ -91,7 +91,7 @@ HANK_DEEPSEEK_OUTBOUND_APPROVED=1 \
   "$plugin_root/scripts/run-deepseek-review.py" "$review_patch_file"
 ```
 
-环境变量只表示用户已经明确授权本次外发，不能跨轮次复用。runner 从输入复制开始执行 120 秒整体超时，并捕获标准输出、标准错误和退出码。禁止添加任何自动审批参数。runner 以 `DSH_PERMISSION_MODE=read-only` 调用 `dsh --profile headless`：该模式下写入与执行会被沙箱拒绝且无审批通道可逃逸（已用真实调用验证：命令仍成功退出并给出报告，但目标文件确认未被创建）。读取权限是按整个工作目录授予的，不是单文件白名单——工作目录（临时隔离目录）里只放了 `review-input.patch` 和两个全新的隔离 `home`/`DSH_HOME` 子目录，模型能读到的本地内容仅限于此；相比旧版 OpenCode 的单文件读取白名单，这是更粗粒度的边界，是已知并接受的取舍，不是遗漏。runner 使用隔离的 HOME 与全新的 `DSH_HOME`，只显式传入 `DEEPSEEK_API_KEY`，不继承其余环境变量。
+环境变量只表示用户已经明确授权本次外发，不能跨轮次复用。runner 从输入复制开始执行 600 秒整体超时（一个上千行的 patch 在 300 秒内都未必跑得完，超时会让门禁恒定失败），并捕获标准输出、标准错误和退出码。禁止添加任何自动审批参数。runner 以 `DSH_PERMISSION_MODE=read-only` 调用 `dsh --profile headless`：该模式下写入与执行会被沙箱拒绝且无审批通道可逃逸（已用真实调用验证：命令仍成功退出并给出报告，但目标文件确认未被创建）。读取权限是按整个工作目录授予的，不是单文件白名单——工作目录（临时隔离目录）里只放了 `review-input.patch` 和两个全新的隔离 `home`/`DSH_HOME` 子目录，模型能读到的本地内容仅限于此；相比旧版 OpenCode 的单文件读取白名单，这是更粗粒度的边界，是已知并接受的取舍，不是遗漏。runner 使用隔离的 HOME 与全新的 `DSH_HOME`，只显式传入 `DEEPSEEK_API_KEY`，不继承其余环境变量。
 
 runner 清理临时目录前验证它由本次调用创建，且直接位于 `${TMPDIR:-/tmp}` 下。
 
@@ -100,9 +100,14 @@ runner 清理临时目录前验证它由本次调用创建，且直接位于 `${
 runner 直接解析 `dsh --profile headless` 的纯文本输出（不是 JSONL 事件流）。以下任一情况都判为 DeepSeek 复核失败：
 
 1. 非零退出码或超时。
-2. 标准错误非空（成功的 dsh 调用应该没有任何 stderr 输出；出现任何内容都按不确定状态失败关闭，不去猜测其含义）。
-3. 输出为空。
-4. 文本只表示拒绝执行，没有实际 finding。
+2. 输出为空。
+3. 文本只表示拒绝执行，没有实际 finding。
+
+已知残留：`AUTH_HEADER` 把尖括号和 shell 展开里的值一律当占位符记号，所以一个真 token 被写成 `<...>` 包裹的形式放进 auth 头时不会被拦。尖括号和 `${...}` 本身就是占位符写法，跟文档里常见的 `<YOUR_KEY>`、`${API_KEY}` 在形态上不可区分，收紧就会把正常文档示例重新拦死，因此接受这条漏报。（本段刻意不写成完整的头部字面量，否则这份契约文档自己就会被扫描器拦下。）
+
+敏感信息扫描对三个自指文件跳过：`check-review-patch.sh` 自己和两个 `validate-*-security.sh`。这三份文件按构造就含凭据形态的字面量（规则源码与测试 fixture），而 patch 同时携带新增行、删除行和上下文行，不跳过就会让任何触碰它们的推送永久失败。已知取舍：真的把凭据提交进这三份文件，这里不会拦住。patch 由 git 从本地提交生成，不接受第三方投喂，所以伪造 `+++` 头不在威胁模型内。
+
+标准错误不参与判定：`dsh --profile headless` 的设计行为就是把 reasoning 流写到 stderr（其 `--help` 原文：stream reasoning to stderr, print the final assistant message），成功调用的 stderr 必然非空。早前那条「stderr 非空即失败关闭」的规则建立在对 dsh 的错误假设上，会让每一次调用都失败，已移除。
 
 runner 启动前用 `shutil.which("dsh")` 解析出绝对路径，并校验该文件属主是当前用户且不允许 group/other 写入才使用；两者任一不满足都失败关闭（`dsh_untrusted_binary`）。这只挡得住"PATH 里更早的目录被放了一个 group/other 可写或非本用户拥有的同名文件"这类经典 PATH 投毒，防不住调用账户本身已经被攻破的情形，也不做二进制签名或哈希校验。已知取舍（TOCTOU）：`stat` 校验和实际执行之间存在竞态窗口，未做基于文件描述符的免竞态执行；当前判断该场景风险可接受，暂不修复，后续如有需要再处理。
 

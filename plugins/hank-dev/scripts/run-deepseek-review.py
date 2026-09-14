@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 
-TIMEOUT_SECONDS = 120
+TIMEOUT_SECONDS = 600
 MAX_PATCH_BYTES = 2 * 1024 * 1024
 CONSENT_ENV = "HANK_DEEPSEEK_OUTBOUND_APPROVED"
 API_KEY_ENV = "DEEPSEEK_API_KEY"
@@ -23,6 +23,9 @@ PROMPT = (
     "只读当前目录的 review-input.patch。审查 bug、边界条件和简化复用空间。"
     "禁止修改文件，禁止执行命令。每条 finding 包含文件、行号、触发场景、"
     "严重程度、置信度和证据。"
+    "存在高危或致命 finding 时，输出的最后一行必须是 GATE: BLOCK，否则必须是 GATE: PASS。"
+    "该行只写这两个词之一，不要附加括号说明或任何其他内容；"
+    "除这最后一行外，正文任何位置都不要出现 GATE: 字样。"
 )
 SAFE_ENV_KEYS = (
     "LANG",
@@ -56,12 +59,18 @@ class ResultError(Exception):
 
 
 def parse_output(stdout: str, stderr: str, returncode: int) -> str:
-    """把 dsh headless 的纯文本输出解析为结果，任何不确定状态都失败关闭。"""
+    """把 dsh headless 的纯文本输出解析为结果，任何不确定状态都失败关闭。
+
+    `stderr` 保留在签名里只为兼容 fixture 格式，不参与判定：`dsh --profile
+    headless` 的设计行为就是把 reasoning 流写到 stderr（见其 --help：stream
+    reasoning to stderr, print the final assistant message），成功调用的 stderr
+    必然非空。早期版本把"stderr 非空"当成不确定状态失败关闭，建立在"成功调用
+    stderr 为空"这个对 dsh 的错误假设上，会让每一次调用都失败。失败判定改由
+    退出码、空输出和纯拒绝文本三条承担。
+    """
 
     if returncode != 0:
         raise ResultError("nonzero_exit")
-    if stderr.strip():
-        raise ResultError("unexpected_stderr")
     result = stdout.strip()
     if not result:
         raise ResultError("empty_output")

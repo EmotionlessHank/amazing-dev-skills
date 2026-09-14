@@ -18,7 +18,7 @@
 | `{TYPECHECK_COMMAND}` | 类型检查 | `pnpm typecheck` |
 | `{TOKEN_CHECK}` | 校验设计 token 没漂，没有就删掉这行 | `pnpm tokens:check` |
 | `{SCREENSHOT_SETUP}` | 用什么浏览器、登录态怎么造、注意事项 | `headed 真 Chrome；用仓库自带的测试夹具造会话` |
-| `{DIFF_COMMAND}` | Step 6.3 算像素差用什么。项目没有专门工具就填「无」，Step 6.3 自带 Pillow 兜底 | `compare -metric AE baseline.png impl.png null:` |
+| `{DIFF_COMMAND}` | Step 6.3 算像素差用什么。必须能输出「整体比例 + 逐区块比例」两样，只给一个总数的工具不合格。项目没有就填 `无`，Step 6.3 自带 Pillow 兜底 | `pnpm visual:diff <基线图> <实现图>`，或直接填 `无` |
 | `{ARTIFACT_DIR}` | 基线图、实现图、拼图、节点清单落哪 | `workspace/progress/<task>/figma/` |
 
 `{组件}` `{nodeId}` 这类小写或驼峰的是运行时动态量，不要替换。

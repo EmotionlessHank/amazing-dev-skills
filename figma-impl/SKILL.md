@@ -113,6 +113,7 @@ get_design_context({
 
 门禁：必须传 `forceCode: true`。`clientFrameworks` 走装机时填的 `{CLIENT_FRAMEWORKS}`，
 别照抄别的项目的值 —— 传错框架名，MCP 返回的代码风格就整个偏掉，而它不会报错。
+`clientLanguages` 保持 `typescript,css` 不参数化：所有 web 栈都是这两样，没有可变的余地。
 输出：保存返回的结构化代码，标出所有 localhost 资源 URL。
 
 ### Step 3 存视觉基线 ⛔ 硬阻塞门禁（最关键）
@@ -151,7 +152,8 @@ get_design_context({
    那一栏列没列这个库。两条都满足（已是依赖、没被禁）就直接用设计稿画的那个库 —— 这是
    零成本的精确还原，比任何替换都好。
    **这里要分清两种项目规则，它们的强度不一样**：
-   - 「项目统一用 X 图标库」这类**默认约定**，在**改版屏幕**上给设计稿让位。写清楚是
+   - 「项目统一用 X 图标库」这类**默认约定**，在**改版屏幕**上给设计稿让位。改版屏幕指
+     这次设计稿覆盖到的那些屏幕，不含只是碰巧引用了同一个组件的其他屏幕。写清楚是
      「稿子画哪个库就用哪个库，其余屏幕不动」，并把这条记进方案。
    - `{ICON_SYSTEM}` 里明写的**禁止直接使用**（例如「lucide 只许出现在生成的原语内部」）
      是硬禁令，**不让位**，直接走第 2 条。
@@ -225,7 +227,11 @@ get_design_context({
 匀掉 —— 一处 65% 的区块偏差，摊到整页就只剩 7%，看上去像通过了。文字和图标边缘的抗锯齿
 差异是正常的，结构性偏差不是。
 
-项目专项填了 `{DIFF_COMMAND}` 就用它。没填就用这段兜底，只依赖 Pillow：
+`{DIFF_COMMAND}` 无论是自带工具还是兜底脚本，都要给出同一组东西：**一个整体比例，
+外加逐区块的比例**。只报一个整体数字不算做过这一步。
+
+项目专项那栏填的是 `无` 时（这是约定的哨兵值，不是一条要执行的命令），用下面这段兜底，
+只依赖 Pillow：
 
 ```bash
 python3 - "<基线图路径>" "<实现图路径>" <<'EOF'
@@ -238,15 +244,20 @@ if a.size != b.size:
     sys.exit(1)
 d = ImageChops.difference(a, b).split()
 m = ImageChops.lighter(ImageChops.lighter(d[0], d[1]), d[2])
-mask = m.point(lambda v: 255 if v > 16 else 0)   # 16 以内当抗锯齿噪声
+THRESHOLD, ROWS, COLS = 16, 3, 3   # 阈值 16 当抗锯齿噪声；低对比度偏差调到 8
+mask = m.point(lambda v: 255 if v > THRESHOLD else 0)   # 宽扁组件可以改成 3 行 5 列
 w, h = a.size
 def ratio(box=None):
     x = mask.crop(box) if box else mask
-    return x.histogram()[255] / (x.size[0] * x.size[1])
-print(f"整体差异 {ratio():.2%}")
-for i in range(3):
-    for j in range(3):
-        print(f"  区块[{i}][{j}] {ratio((j*w//3, i*h//3, (j+1)*w//3, (i+1)*h//3)):.2%}")
+    n = x.size[0] * x.size[1]
+    return x.histogram()[255] / n if n else None
+def fmt(v):
+    return "区域太小，无法统计" if v is None else f"{v:.2%}"
+print(f"整体差异 {fmt(ratio())}")
+for i in range(ROWS):
+    for j in range(COLS):
+        box = (j*w//COLS, i*h//ROWS, (j+1)*w//COLS, (i+1)*h//ROWS)
+        print(f"  区块[{i}][{j}] {fmt(ratio(box))}")
 EOF
 ```
 
@@ -257,7 +268,7 @@ EOF
 
 门禁：6.1 的表全绿，6.2 的拼图无可见偏差，6.3 的差异数字（或那行明写的缺口声明）在场。
 **三件事缺一件就不算过** —— 这条和本节开头那句是同一条，不要只照着门禁行做两件。
-输出拼图、清单和差异数字这三样的路径作为证据。
+证据这样给：拼图和清单给文件路径，6.3 直接把整体比例和分区比例贴在验收输出里。
 
 ## 项目专项（装机时填）
 

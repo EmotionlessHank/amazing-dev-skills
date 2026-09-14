@@ -1,40 +1,60 @@
 ---
 name: figma-impl
-description: Enforced pixel-perfect Figma implementation workflow. Triggers on "/figma-impl", "implement from Figma", "Figma pixel-perfect", "Figma adaptation". Elevates the 6-step SOP from LESSONS §14 from a reference document into a structured enforced process with gate checks at every step, eliminating rework caused by skipping steps.
-version: 1.0.0
+description: 受门禁约束的 Figma 像素级实现流程。触发词包括 "/figma-impl"、"照 Figma 实现"、"实现这个设计稿"、"Figma 还原"、"pixel-perfect"。把「先确认节点粒度 → 存视觉基线 → 分类资源 → 按精确数值实现 → 截图比对」这条 SOP 从参考文档提升为每步带门禁的强制流程，消灭跳步造成的返工。
+version: 2.0.0
 ---
 
-# /figma-impl — Pixel-Perfect Figma Implementation
+# /figma-impl — Figma 设计稿实现流程
 
-Elevates the 6-step SOP from LESSONS §14 from "advisory document" to "enforced process". Each step has a gate check — you cannot proceed to the next step until the current one is complete.
+## 适用范围
 
-**Design rationale**: Historical data shows fix-commit rates > 50% on Figma implementation tasks (swap-figma 50%, betslip 78%). The root cause is AI skipping screenshot capture and visual comparison steps. This skill eliminates step-skipping through a structured gate-controlled workflow.
+**只用于 `{SCOPE_ROOT}` 下的仓库。** 触发词「实现这个设计稿」很通用，在别的项目里也会
+命中，那种情况不要走本流程，按该项目自己的技术栈和惯例做。
 
-## 全流程图 / Full implementation flow
+装在 `{SKILL_HOME}`，`~/.claude/skills/` 下建软链接指过去。软链接是必需的：工作区级
+skill 只在 cwd 恰好等于该目录时加载，不从子目录继承，不建软链接就等于在实际写代码的
+仓库子目录里永远不触发（见 harness `omc-skill-deploy`）。代价是全局可见，所以范围判断
+的责任落在本节。
+
+**设计依据**：历史数据显示 Figma 实现类任务的修复提交率超过 50%，根因是跳过截图与视觉比对
+这两步。本流程用门禁把它们变成不可跳。
+
+## 前置：Figma MCP 认证
+
+`get_screenshot` / `get_metadata` / `get_design_context` 三个读取工具都要求对该文件有
+**edit 权限**，view-only 一律拒，报错文案是 `you don't have edit access`。
+
+- 先 `mcp__plugin_figma_figma__whoami` 确认身份。设计文件属于哪个账号，就得用哪个账号，
+  跨账号打不开。
+- 身份不对时：先在**默认浏览器**里退出当前 Figma 账号、登对的那个，**再**跑 `/mcp` 清认证
+  重授权。只清认证不换浏览器登录态，会原样再授权一次同一个账号（实测踩过两轮）。
+- **Dev seat 就够**，不需要 Full seat。
+
+## 全流程
 
 ```mermaid
 flowchart TD
     accTitle: Figma 实现与视觉验收流程 | Figma implementation and visual acceptance flow
     accDescr: 从节点确认到逐组件视觉验收的受控实现流程 | controlled implementation from node confirmation to per-component visual acceptance
 
-    A[接收 Figma 节点与实现范围\nreceive Figma node and implementation scope] ==> B{是否为整页节点\nis it full-page}
-    B ==> |是 / yes| C[读取层级、拆分组件并确认顺序\nread hierarchy, split components, confirm order]
-    B ==> |否 / no| D[确认单个组件边界\nconfirm single-component boundary]
-    C ==> E[逐个执行组件循环\niterate component loops]
+    A[接收 Figma 节点与实现范围] ==> B{是否为整页节点}
+    B ==> |是| C[读层级、拆组件、确认顺序]
+    B ==> |否| D[确认单个组件边界]
+    C ==> E[逐个执行组件循环]
     D ==> E
-    E ==> F[读取设计数据并保存视觉基线\nread design data and save visual baseline]
-    F ==> G{基线截图可用\nbaseline screenshot available}
-    G ==> |否 / no| H[重试一次，仍失败则暂停并报告\nretry once, pause and report if still failing]
-    G ==> |是 / yes| I[分类资源并按精确规格实现\nclassify assets and implement to exact spec]
-    I ==> J[类型检查与实现截图\ntype-check and capture implementation screenshot]
-    J ==> K{与基线存在可见偏差\nvisible difference from baseline}
-    K ==> |是，未达三轮 / yes, under 3 rounds| L[记录差异并修正\nlog diff and fix]
+    E ==> F[读设计数据并保存视觉基线]
+    F ==> G{基线截图可用}
+    G ==> |否| H[重试一次，仍失败则暂停并报告]
+    G ==> |是| I[分类资源并按精确规格实现]
+    I ==> J[类型检查与实现截图]
+    J ==> K{与基线存在可见偏差}
+    K ==> |是，未达三轮| L[记录差异并修正]
     L ==> J
-    K ==> |是，已达三轮 / yes, at 3 rounds| M[暂停并输出差异清单\npause and output diff list]
-    K ==> |否 / no| N[通过视觉验收并记录证据\npass visual acceptance and log evidence]
-    N ==> O{还有待实现组件\nmore components remain}
-    O ==> |是 / yes| E
-    O ==> |否 / no| P[汇总文件、轮次与验收结果\nsummarize files, rounds, and acceptance]
+    K ==> |是，已达三轮| M[暂停并输出差异清单]
+    K ==> |否| N[通过视觉验收并记录证据]
+    N ==> O{还有待实现组件}
+    O ==> |是| E
+    O ==> |否| P[汇总文件、轮次与验收结果]
 
     classDef startEnd fill:#0f766e,color:#ffffff,stroke:#115e59,stroke-width:1.5px
     classDef gate fill:#fef3c7,color:#713f12,stroke:#d97706,stroke-width:1.5px
@@ -46,241 +66,198 @@ flowchart TD
     class H,M risk
 ```
 
-图说明：图中关键控制点是先确认粒度、保存基线，再用截图闭环；任一门禁未通过即暂停。The key control points are confirm granularity first, capture baseline, then close with screenshot comparison; any failed gate pauses progress.
+关键控制点：先确认粒度、存基线，再用截图闭环；任一门禁未过即暂停。
 
----
+## 输入
 
-## Inputs
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| Figma 节点 ID 或链接 | 是 | 要实现的设计节点 |
+| 目标文件路径 | 否 | 可以在第一步之后再定 |
+| 实现范围 | 否 | 单组件 / 整页（默认单组件；整页强制拆分） |
 
-Collect the following from the user (ask if missing):
+## 整页拆分规则（强制）
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| Figma node ID or link | Yes | The design node to implement |
-| Target file path | No | Component file to modify/create (can be determined after Step 1) |
-| Implementation scope | No | Single component / full page (default: single component; full page auto-splits) |
-
----
-
-## Full-Page Split Rules (Mandatory)
-
-If the user provides a full-page node (not a single component), **split it into a component list first**, then run through the full Cycle for each one individually.
+给的是整页节点而不是单组件时，**先拆成组件清单**，再对每个组件单独跑完整循环。
 
 ```
-Full-page node
-  → Use get_metadata to identify sub-component boundaries
-  → Split into N independent components/sections
-  → List implementation order (top-to-bottom, outer-to-inner)
-  → User confirms the split plan
-  → Run the 6-step Cycle below for each component
+整页节点
+  → get_metadata 识别子组件边界
+  → 拆成 N 个独立组件/区块
+  → 列出实现顺序（自上而下、由外而内）
+  → 用户确认拆分方案
+  → 对每个组件跑下面的六步循环
 ```
 
-**Prohibited**: Implementing the entire page at once and only then comparing screenshots.
+**禁止**：整页一次性实现完再比对截图。
 
----
+## 六步循环（每个组件跑一遍）
 
-## 6-Step Cycle (Run once per component/section)
+### Step 1 节点确认 ⛔ 门禁
 
-### Step 1: Node Confirmation ⛔ Gate
+调 `get_metadata({nodeId})` 看层级，确认拿到的是最外层容器（Modal 取遮罩层，Card 取最外框）。
+用户给的是子节点就主动往上找父容器并告知。
 
-```
-Actions:
-  1. Call get_metadata({nodeId}) to inspect node hierarchy
-  2. Confirm the node is the outermost container (Modal → overlay layer, Card → outermost frame)
-  3. If the user gave a child node → proactively find its parent container and inform the user
+门禁：粒度未确认不得继续。输出 `节点已确认：{nodeId} — {节点名}（{层级位置}）`。
 
-Gate condition: Node granularity must be confirmed before continuing
-Output: "Node confirmed: {nodeId} — {node name} ({hierarchy position})"
-```
-
-### Step 2: Fetch Design Data ⛔ Gate
+### Step 2 取设计数据 ⛔ 门禁
 
 ```
-Actions:
-  Call get_design_context({
-    nodeId: "...",
-    forceCode: true,
-    clientLanguages: "typescript,css",
-    clientFrameworks: "react,next.js,tailwindcss",
-    artifactType: "COMPONENT_WITHIN_A_WEB_PAGE_OR_APP_SCREEN"
-  })
-
-Gate condition: forceCode: true must be passed (the hook also checks for this)
-Output: Save the returned structured code; flag all localhost asset URLs
+get_design_context({
+  nodeId, forceCode: true,
+  clientLanguages: "typescript,css",
+  clientFrameworks: "vue,nuxt,tailwindcss",
+  artifactType: "COMPONENT_WITHIN_A_WEB_PAGE_OR_APP_SCREEN"
+})
 ```
 
-### Step 3: Capture Visual Baseline ⛔ Hard Block Gate (Most Critical)
+门禁：必须传 `forceCode: true`。输出：保存返回的结构化代码，标出所有 localhost 资源 URL。
 
-```
-Actions:
-  Call get_screenshot({nodeId}) to capture the Figma screenshot
+### Step 3 存视觉基线 ⛔ 硬阻塞门禁（最关键）
 
-Gate condition: Screenshot must be successfully captured and saved
-  - Save path: .screenshots/figma-{nodeId}-baseline.png
-  - On failure: retry once; if still failing, pause and notify the user
+`get_screenshot({nodeId, maxDimension: 1400})` 拿到短时效 URL，`curl` 下载落盘。
 
-Output: "Visual baseline captured: .screenshots/figma-{nodeId}-baseline.png"
+**落盘位置走项目自己的归档约定，不要随手丢 `/tmp`**，见「项目专项」的 `{ARTIFACT_DIR}`。
+文件名带节点号。
 
-⛔ This is a hard block: implementing without a visual baseline = coding blind. Do not proceed.
-```
+**同时落一份节点清单。** 把 Step 1 的 `get_metadata` 输出整理成一张表，每行一个
+可见节点（名字、尺寸、在父容器里的位置），存成 `<组件>-inventory.md`。Step 6 要拿它
+逐行打勾。
 
-### Step 4: Asset Handling
+门禁：截图必须成功落盘；失败重试一次，仍失败就暂停并告知用户。
 
-```
-Actions:
-  1. Scan all http://localhost:3845/assets/ URLs in the Step 2 code output
-  2. Classify and handle each by the following rules:
+⛔ 这是硬阻塞：没有视觉基线就写代码等于盲写，不得继续。
 
-  A. Generic UI icons (menu / arrow / search / close / settings / etc.):
-     → Do NOT download the SVG
-     → Find the corresponding icon in @phosphor-icons/react (must include the Icon suffix)
-     → If not found in Phosphor → immediately notify the user and wait for instructions
+### Step 4 资源处理
 
-  B. Brand / custom icons (Logo / tokens / event-specific icons / etc.):
-     → curl download to the appropriate subdirectory under public/
-     → Extract custom SVG icons as components/icons/XxxIcon.tsx
+扫出 Step 2 代码里全部 `http://localhost:3845/assets/` URL，逐个分类：
 
-  C. Ambiguous icons:
-     → List screenshots/descriptions of each icon and ask the user whether it falls under A or B
+- **通用 UI 图标**（菜单 / 箭头 / 搜索 / 关闭 / 设置）→ 不下载 SVG，用项目现有图标体系，
+  见「项目专项」；找不到对应图标立刻告知用户并等指示。
+- **品牌/定制图标**（Logo、专属图标）→ `curl` 下载到 `public/` 下合适的子目录，
+  或抽成组件。
+- **判断不了的** → 列出每个图标的描述问用户属于哪一类。
 
-Output: Asset handling inventory (each item labeled: Phosphor / downloaded / pending confirmation)
-```
+输出：资源处理清单，每项标注「用现有图标 / 已下载 / 待确认」。
 
-### Step 5: Implement Code
+### Step 5 写代码
 
-```
-Actions:
-  1. Transcribe exact pixel values from MCP output (do not substitute Tailwind semantic classes):
-     - gap-[32px] → write gap-[32px], NOT gap-8
-     - p-[40px] → write p-[40px], NOT p-10
-     - rounded-bl-[16px] → write rounded-bl-[16px], NOT rounded-l-2xl
-     Only exception: an exact matching Design Token exists in tailwind.config.ts
+1. **精确数值照抄，不要换成 Tailwind 语义类**：`gap-[32px]` 就写 `gap-[32px]` 不写 `gap-8`；
+   `p-[40px]` 不写 `p-10`；`rounded-bl-[16px]` 不写 `rounded-l-2xl`。唯一例外是项目里
+   确实存在完全匹配的 design token。
+2. **颜色**：有 `var(--xxx)` 就用对应 token；裸 hex/rgba（Figma 硬编码）写原值并加
+   `@figma-hardcoded` 注释；不要自己造新 token。
+   **不许凭语义猜。** 「这是次要文字，那就 `--muted-foreground` 吧」是最常见的错源。
+   每个颜色都要有出处：Step 2 的注释、资源 SVG 里的 `fill`/`stroke`，或者直接从基线
+   图上采样那几个像素。三者对不上时以采样为准，并在注释里写明。
+3. **缺数据不等于不实现。** 设计稿上画了、而代码里「没有这个字段」时，按顺序往下走，
+   **不要直接删掉这个元素**：
+   1. 先查数据是不是真的没有。查到接口的 DTO 就停是不够的，要一路查到数据库列和写
+      入路径 —— 字段常常已经存在，只是没有被投影出来。
+   2. 确实没有，就用**设计稿自己的内容硬编码**（它的占位文案、它导出的那张图），并
+      在注释里写清楚这是占位、等哪个批次接真数据。
+   3. 只有当硬编码会造成误导（编造出用户会当真的数字、姓名、金额）时，才留空，
+      并且必须当场问用户，不能自己记一条 gap 就算完。
+   删掉一个设计稿上有的元素是范围决策，不是技术约束，轮不到实现者单方面做。
+4. **没画的也不要加。** 上一条的反面，同等重要：设计稿上没有的元素、状态、分支、
+   空态、hover 文案，一律不实现。常见的自作主张是「把设计稿画的一个状态推广成一套」
+   —— 稿子上画了 Draft 徽章，就只做 Draft，不要顺手补出 Active 和 Archived 三件套。
+   稿子缺哪个状态，是问设计的事，不是补全的事。
+   一句话：**画了的不许删，没画的不许加。** 两个方向都是范围，都不归实现者定。
+5. **效果属性**（opacity / blur / shadow / gradient）：先 grep 项目里同类效果的现有实现，
+   以项目参数为基线适配，不要直接照搬 Figma 数值。
+6. 单次改动不超过 3 个文件。
 
-  2. Color handling:
-     - Has a var(--xxx) → use the corresponding Design Token
-     - Bare hex/rgba (Figma hard-coded) → write raw value + @figma-hardcoded comment
-     - Do NOT create new tokens on your own
+### Step 6 视觉验收 ⛔ 交付门禁
 
-  3. Effect properties (opacity / blur / shadow / gradient):
-     - First grep the project for existing implementations of the same effect type
-     - Adapt using existing project parameters as the baseline; do not copy Figma values directly
-     - Must account for the actual rendering environment
+三件事都要做，**缺一件就不算过**。量出来的数字对，不代表画面对：数字只能覆盖你想到
+要量的东西，对「本来该有、但你没实现」的元素完全是瞎的。
 
-  4. File modification limit: no more than 3 files per pass
+**6.1 清单打勾（防漏）**
 
-Output: Implemented code (already passed PostToolUse type-check hook)
-```
+拿 Step 3 那份节点清单，一行一行对着实现打勾。每个可见节点必须有三种下场之一：
+已实现 / 按 Step 5 第 3 条硬编码了占位 / 用户明确说了不做。**没有第四种。**
+输出这张打完勾的表。
 
-### Step 6: Visual Acceptance ⛔ Delivery Gate
+**6.2 并排放大比对（防偏）**
 
-```
-Actions:
-  1. Open the implementation in a browser
-  2. Take a screenshot of the current implementation: browser_take_screenshot or chrome-devtools take_screenshot
-     - Save to: .screenshots/impl-{component}-current.png
-  3. Compare against the Figma baseline screenshot from Step 3:
+1. 起开发服务器，在浏览器里打开实现。
+2. 截实现图，裁到和基线同一个区域。
+3. **把两张图上下拼成一张、放大到 2 倍以上再看。** 1 倍全页截图看不出字重、图标
+   粗细、颜色深浅这一类偏差 —— 这几样恰好是最常出问题的。
+4. 逐项过：布局结构、间距、颜色、圆角、字号字重、图标、效果。
 
-  Comparison checklist:
-  □ Overall layout structure (element arrangement / hierarchy)
-  □ Spacing (padding / margin / gap)
-  □ Colors (text / background / border)
-  □ Border radius
-  □ Font size / font weight
-  □ Icons (correctness / size / color)
-  □ Effects (shadow / blur / gradient)
+**6.3 像素差（防自我感觉良好）**
 
-  4. Handling discrepancies:
-     - Discrepancy found → fix immediately → re-screenshot → compare again
-     - Maximum 3 correction rounds per component; if still not matching after 3 rounds, pause and report to the user
-     - No discrepancies → proceed to delivery
+对齐后算差异比例，并按区域拆开报：哪一块贡献了多少。整体一个数字会把一处大偏差
+匀掉。文字和图标边缘的抗锯齿差异是正常的，结构性偏差不是。
 
-Gate condition: Implementation screenshot must have no visible deviation from the Figma baseline
-Output:
-  "✅ Visual acceptance passed: {component_name}
-   Figma baseline: .screenshots/figma-{nodeId}-baseline.png
-   Implementation: .screenshots/impl-{component}-current.png"
-```
+有偏差就改、重截、再比；**每个组件最多三轮**，三轮仍不 match 就暂停并输出差异清单。
 
----
+门禁：6.1 的表全绿，6.2 的拼图无可见偏差。输出拼图和清单的路径作为证据。
 
-## After Each Cycle
+## 项目专项（装机时填）
 
-```
-1. Clean up screenshots:
-   - Screenshots that have passed acceptance can be deleted (to save space)
-   - Or keep them until the entire task is complete, then clean up all at once
+这一节是模板，按项目替换。没有这一节的技能等于没装好：下面每一条都是「写错了不会报错、
+只会安静地产出错东西」的那种坑。
 
-2. If in full-page split mode:
-   - Mark the current component as ✅
-   - Output progress: "Completed {M}/{N} components"
-   - Automatically start the Cycle for the next component
+**技术栈**：`{STACK}`。Figma MCP 返回的永远是 React + Tailwind，必须翻译过去。
 
-3. If in single-component mode:
-   - Task complete
+**图标**：`{ICON_SYSTEM}`。设计稿里的图标来自哪个库不重要，**产出必须用项目自己的那套**；
+找不到对应图标立刻告知用户并等指示，不要随手换一个形似的。
+注意图标**粗细**也要对：设计稿常用 lucide（stroke 1.5），换成别的库时要挑权重相近的那一档，
+细一档在 1 倍下看不出来、放大就露馅。
+
+**颜色与 token**：`{COLOR_SYSTEM}`。实现前先查项目的映射表（哪个组件的哪一部分该用哪个变量），
+不要自己造新 token。
+
+**命令**：
+
+```bash
+{DEV_COMMAND}        # 起开发服务器
+{TYPECHECK_COMMAND}  # 类型检查
+{TOKEN_CHECK}        # 校验设计 token 没漂（如果有）
 ```
 
----
+**截图验收怎么起**：`{SCREENSHOT_SETUP}`。至少写清楚三件事：用什么浏览器（headless 与
+headed 的渲染差异是真实存在的，滚动条几何、字体抗锯齿都会变）、登录态怎么造、截图落到哪。
 
-## Overall Task Completion Summary
+**落盘位置**：`{ARTIFACT_DIR}`。基线图、实现图、拼图、节点清单都放这里，不要丢 `/tmp`。
 
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Figma Implementation Complete
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Components: {N}
-Files modified: {files list}
-Correction rounds: {total rounds} (target: <= 1 round/component)
-Steps skipped: 0 (guaranteed by enforced workflow)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+## 可选开关
 
----
+| 开关 | 说明 |
+| --- | --- |
+| `--pc-only` | 只做桌面端（≥768px） |
+| `--h5-only` | 只做移动端（<768px） |
+| `--skip-effects` | 跳过 shadow/blur/gradient，后续单独处理 |
+| `--dry-run` | 只跑 Step 1–4（分析 + 资源），不写代码 |
 
-## Optional Flags
+## 报错速查
 
-| Flag | Description |
-|------|-------------|
-| `--pc-only` | Implement PC (≥768px) only, skip mobile |
-| `--h5-only` | Implement mobile (<768px) only, skip PC |
-| `--skip-effects` | Skip effect properties (shadow/blur/gradient) for separate handling later |
-| `--dry-run` | Run Steps 1–4 only (analysis + assets), do not write code |
+| 现象 | 处理 |
+| --- | --- |
+| `you don't have edit access` | 见「前置：Figma MCP 认证」，八成是账号没换过来 |
+| `get_design_context` 输出被截断 | 确认传了 `forceCode: true`；仍截断就拆子节点分段取 |
+| `get_screenshot` 失败 | 重试一次，仍失败请用户手动给图 |
+| 节点 ID 无效 | 请用户确认，或用 `get_metadata` 帮忙定位 |
+| 实现与设计差太多 | 三轮仍不 match → 暂停，输出差异清单，等指示 |
+| 效果属性在真实环境对不上 | 优先用项目里同类效果的现有参数，并写明适配理由 |
 
----
+## 反模式（历史教训）
 
-## Error Handling
-
-| Scenario | Resolution |
-|----------|-----------|
-| get_design_context output is truncated | Check that forceCode: true was passed; if still truncated, split into sub-nodes and fetch in segments |
-| get_screenshot fails | Retry once; if still failing, ask the user to provide a screenshot manually |
-| Invalid Figma node ID | Ask the user to confirm the node ID; offer get_metadata to help locate it |
-| Implementation screenshot diverges too much from Figma | After 3 correction rounds with no match → pause, output a diff list, await user instructions |
-| Browser not running | Prompt the user to start the dev server (pnpm dev) and open a browser |
-| Effect properties don't match in the actual environment | Prioritize existing project parameters for the same effect type; document the adaptation rationale |
-
----
-
-## Integration with Other Infrastructure
-
-| Infrastructure | Integration |
-|----------------|------------|
-| `figma-checkpoint.sh` Hook | The hook reminds to take a screenshot after get_design_context; this skill enforces it in the workflow |
-| `type-check.sh` Hook | Automatically triggers type checking after code is written in Step 5 |
-| `/patch-audit` Skill | Use patch-audit after implementation to check for patch accumulation |
-| `/quality-scan` Skill | Use quality-scan after implementation to check code standards |
-| LESSONS §14 | This skill is the executable form of §14; the rules are consistent |
-
----
-
-## Anti-Pattern Warnings (Historical Lessons)
-
-The following behaviors caused > 50% rework rates in past sessions. This skill structurally prevents them through gate checks:
-
-| Anti-pattern | Historical consequence | How this skill prevents it |
-|-------------|----------------------|--------------------------|
-| Implementing without a screenshot | swap-figma: 10 fix commits | Step 3 hard block |
-| Comparing only after full-page implementation | Accumulated discrepancies hard to isolate | Full page is forced to split into per-component cycles |
-| Using approximate Tailwind semantic classes | Spacing/radius deviations throughout | Step 5 transcription rules |
-| Ignoring localhost asset URLs | Components missing icons/images | Step 4 mandatory asset handling |
-| Copying effect properties directly from Figma | Frosted glass/shadow invisible in actual environment | Step 5 environment adaptation workflow |
-| Using Phosphor icons for custom brand icons | User repeatedly corrects it | Step 4 classification rules + ask when uncertain |
+| 反模式 | 后果 | 本流程怎么拦 |
+| --- | --- | --- |
+| 没截图就开写 | swap-figma 项目 10 个修复提交 | Step 3 硬阻塞 |
+| 整页写完才比对 | 差异累积无法定位 | 整页强制拆成逐组件循环 |
+| 用近似的 Tailwind 语义类 | 间距/圆角全局偏移 | Step 5 照抄规则 |
+| 忽略 localhost 资源 URL | 组件缺图标缺图 | Step 4 强制资源清单 |
+| 直接照搬 Figma 的效果参数 | 毛玻璃/阴影在真实环境看不见 | Step 5 环境适配流程 |
+| 给品牌图标用通用图标库 | 用户反复纠正 | Step 4 分类规则 + 不确定就问 |
+| 在 headless 里量滚动条 | 某些机器上是 0 宽 overlay，量出来永远「没问题」 | 项目专项的 headed 浏览器要求 |
+| 用「量到的数字都对」代替看图 | 数字只覆盖你想到要量的，漏掉的元素永远量不出来 | Step 6.1 清单 + 6.2 并排图 |
+| 只在 1 倍全页截图上验收 | 字重、图标粗细、颜色深浅全看不出来 | Step 6.2 强制 2 倍以上拼图 |
+| 「后端没这个字段」就删掉设计稿上的元素 | 范围被实现者单方面缩了，而且字段往往其实存在 | Step 5 第 3 条的三级阶梯 |
+| 查到 DTO 没这个字段就下结论 | 字段常常已经在库里、只是没投影出来 | Step 5 第 3 条要求查到数据库列 |
+| 按语义猜颜色 token | `--muted-foreground` 和 `--foreground` 差一档，肉眼看得出来 | Step 5 第 2 条要求采样取证 |
+| 把稿子上的一个状态"补全"成一套 | 交付里多出没人要过的 UI，验收时被打回 | Step 5 第 4 条：没画的不许加 |

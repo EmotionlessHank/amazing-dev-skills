@@ -12,8 +12,9 @@
 | resume-tailor | `/hank-dev:resume-tailor` | 简历/JD 定制流程：master CV 打磨、按 JD 定制、ATS/HR 双代理独立审查、diff 复核、归档 |
 | review | `/hank-dev:review` | 多代理 review：按 diff 规模自动判定单代理还是 team 编排。只有本次明确授权且敏感信息扫描通过时才执行独立 DeepSeek 复核，否则报告缺失原因。 |
 | demo-video | `/hank-dev:demo-video` | 把功能或 PR 录成带旁白的演示视频：先敲定分镜脚本，再截图、TTS 配音、ffmpeg 合成 MP4。默认本地 TTS 免 API key，未经要求不上传。 |
+| goal-to-prod | `/hank-dev:goal-to-prod` | 从目标走到上线：plan、开发、评审循环、PR、部署、线上冒烟、回写 issue 一条龙。每个决策点由 JEV 和另一个独立模型各自作答再交叉决定，原文存档。需先获得用户「自动决策」授权。 |
 
-`feat` / `autopilot` / `worktree-dev` 仍带 `{placeholder}`，是多项目模板，需要按各自的 `SETUP.md` 在项目侧覆盖定制内容（见下面「关于模板占位符」）。
+`feat` / `autopilot` / `worktree-dev` / `goal-to-prod` 仍带 `{placeholder}`，是多项目模板，需要按各自的 `SETUP.md` 在项目侧覆盖定制内容（见下面「关于模板占位符」）。
 
 ## 配额感知路由
 
@@ -66,7 +67,7 @@ The pure router lives in `scripts/autopilot_quota_router.py` and returns only `A
 
 ## 关于模板占位符
 
-`feat` / `autopilot` / `worktree-dev` 发的是通用模板，`{placeholder}` 不会自动替换，插件缓存里的文件也没法直接改。如果某个项目已经有本地定制版（比如 oddfi-backend、health-ai-agent 之前手工替换过占位符的版本），继续在该项目 `.claude/skills/feat/SKILL.md`（同名同路径）保留本地版本即可，项目级同名 skill 会覆盖插件里的中心版本，两者互不冲突。
+`feat` / `autopilot` / `worktree-dev` / `goal-to-prod` 发的是通用模板，`{placeholder}` 不会自动替换，插件缓存里的文件也没法直接改。如果某个项目已经有本地定制版（比如 oddfi-backend、health-ai-agent 之前手工替换过占位符的版本），继续在该项目 `.claude/skills/feat/SKILL.md`（同名同路径）保留本地版本即可，项目级同名 skill 会覆盖插件里的中心版本，两者互不冲突。
 
 全新项目、还没有本地定制版的，插件启用后拿到的是带 `{placeholder}` 的原始模板，不能直接用。要替换占位符，必须在该项目里新建 `.claude/skills/<name>/SKILL.md`（复制插件里对应技能的 `SKILL.md` 内容过去），照 `SETUP.md` 的替换表填好占位符，这份项目级文件才会覆盖插件里的中心版本生效；不要以为改一下就能就地生效。
 
@@ -157,7 +158,7 @@ python3 plugins/hank-dev/scripts/validate-distribution.py
 /reload-plugins
 ```
 
-判定通过：① `/plugin` 列表里 `hank-dev` 明确显示 enabled（只跑过 `marketplace add` 但没手动启用过的话，这里会是灰的/未启用，容易误以为已经装好）；② `/reload-plugins` 的输出里插件数/技能数有相应增量；③ 用完整冒号形式（如 `/hank-dev:review`）或触发关键词能进对应技能的流程，裸的 `/hank-dev` 不会有反应属于正常；④ 需要占位符的技能（feat/autopilot/worktree-dev）在这个项目要么有本地覆盖版本，要么已经按 `SETUP.md` 替换过占位符。
+判定通过：① `/plugin` 列表里 `hank-dev` 明确显示 enabled（只跑过 `marketplace add` 但没手动启用过的话，这里会是灰的/未启用，容易误以为已经装好）；② `/reload-plugins` 的输出里插件数/技能数有相应增量；③ 用完整冒号形式（如 `/hank-dev:review`）或触发关键词能进对应技能的流程，裸的 `/hank-dev` 不会有反应属于正常；④ 需要占位符的技能（feat/autopilot/worktree-dev/goal-to-prod）在这个项目要么有本地覆盖版本，要么已经按 `SETUP.md` 替换过占位符。
 
 ---
 

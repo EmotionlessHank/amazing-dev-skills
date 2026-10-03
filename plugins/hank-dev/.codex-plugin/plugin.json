@@ -1,6 +1,6 @@
 {
   "name": "hank-dev",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "Personal dev pipeline: feat (plan) -> autopilot (build) -> worktree-dev (isolation), plus resume-tailor, multi-agent review, dsh-based DeepSeek delegation, and narrated demo videos",
   "author": {
     "name": "Hank"
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "Hank Dev",
     "shortDescription": "Hank 的个人开发与审查工作流。",
-    "longDescription": "提供 feat、autopilot、worktree-dev、resume-tailor、review、dsh-deepseek-delegate、demo-video 和 goal-to-prod 八个带命名空间的 Codex Skills。",
+    "longDescription": "提供 feat、autopilot、worktree-dev、resume-tailor、review、dsh-deepseek-delegate、demo-video 和 goal-to-prod、housing-research 九个带命名空间的 Codex Skills。",
     "developerName": "Hank",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"]

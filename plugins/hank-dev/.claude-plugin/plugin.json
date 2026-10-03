@@ -1,6 +1,6 @@
 {
   "name": "hank-dev",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "Personal dev pipeline: feat (plan) -> autopilot (build) -> worktree-dev (isolation), plus resume-tailor, multi-agent review, dsh-based DeepSeek delegation, and narrated demo videos",
   "author": { "name": "Hank" },
   "skills": [
@@ -11,6 +11,7 @@
     "./skills/review/",
     "./skills/dsh-deepseek-delegate/",
     "./skills/demo-video/",
-    "./skills/goal-to-prod/"
+    "./skills/goal-to-prod/",
+    "./skills/housing-research/"
   ]
 }

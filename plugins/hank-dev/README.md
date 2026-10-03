@@ -13,6 +13,7 @@
 | review | `/hank-dev:review` | 多代理 review：按 diff 规模自动判定单代理还是 team 编排。只有本次明确授权且敏感信息扫描通过时才执行独立 DeepSeek 复核，否则报告缺失原因。 |
 | demo-video | `/hank-dev:demo-video` | 把功能或 PR 录成带旁白的演示视频：先敲定分镜脚本，再截图、TTS 配音、ffmpeg 合成 MP4。默认本地 TTS 免 API key，未经要求不上传。 |
 | goal-to-prod | `/hank-dev:goal-to-prod` | 从目标走到上线：plan、开发、评审循环、PR、部署、线上冒烟、回写 issue 一条龙。每个决策点由 JEV 和另一个独立模型各自作答再交叉决定，原文存档。需先获得用户「自动决策」授权。 |
+| housing-research | `/hank-dev:housing-research` | 租房调研流水线：需求写成硬条件、软条件、权重三层并复述确认；真实浏览器实时取数；多代理补查楼盘并逐套看照片核验地板、家具、面积；Jev 打分排序；产出 md 报告和 PPT，并做独立验证。附参考脚本和踩坑清单。 |
 
 `feat` / `autopilot` / `worktree-dev` / `goal-to-prod` 仍带 `{placeholder}`，是多项目模板，需要按各自的 `SETUP.md` 在项目侧覆盖定制内容（见下面「关于模板占位符」）。
 

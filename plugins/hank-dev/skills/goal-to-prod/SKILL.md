@@ -53,7 +53,7 @@ description: 给一个明确目标（一个或几个 issue、一段需求），�
 
 ### 2.3 开发（Build）
 
-1. 批次串行或按依赖并行，交给 `oh-my-claudecode:executor`（复杂用 opus）；提示里写清分支、DD 路径、每批文件范围、提交信息规则、禁止 push 和部署、跑 `{CHECK}`。
+1. 批次串行或按依赖并行，交给 `oh-my-claudecode:executor`（默认不传 model，跨模块或架构级改动才传 opus）；提示里写清分支、DD 路径、每批文件范围、提交信息规则、禁止 push 和部署、跑 `{CHECK}`。
 2. 每批一个提交；执行者的口头汇报不算验证，主流程自己再跑一次 `{CHECK}`。
 3. 新增的回归测试，主流程自己对旧代码跑一遍确认它真的会失败（`git show <fix> -- <file> | git apply -R`，跑测试，再 `git checkout -- <file>`）。执行者说「没有验证过会失败」就必须补这一步。
 4. `autopilot` 技能自带 Terra、Luna、Spark 额度路由（`scripts/autopilot_quota_router.py`）。在装有该路由脚本的环境里照 autopilot 的规则走；在没有路由脚本的 Claude Code 环境里跳过这一步，不要假装执行。

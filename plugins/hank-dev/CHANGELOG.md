@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.12
+
+- `goal-to-prod` 的开发步骤不再默认把复杂批次交给 opus：`oh-my-claudecode:executor` 默认不传 model，按 frontmatter 跑 sonnet，只有跨模块或架构级改动才传 opus，与全局子代理路由规则一致。
+- `goal-to-prod` no longer sends complex build batches to opus by default: `oh-my-claudecode:executor` is dispatched without a model, so its frontmatter runs it on sonnet, and opus is passed only for cross-module or architectural changes, in line with the global subagent routing rule.
+
 ## 0.2.11
 
 - 新增 `housing-research` skill：把租房调研做成可复现流水线。先把需求写成硬条件、软条件、偏好权重三层并复述确认；再用真实浏览器实时抓取房源，多代理并行补查楼盘年份与设施，逐套看照片核验地板、家具和面积，用 Jev 逐维度打分加代码按权重加权，输出结构化 md 报告和 PPT，并做独立验证。来自一次 South Yarra 实战（114 套候选筛到 58 套），附浏览器运行外壳和 Jev 调用封装、需求清单模板和踩坑清单：规则层级被读窄、「带家具」被理解成电器、现住楼被当成候选、挂牌下架、Google 评分未渲染、PPT 空白页。浏览器接管和重连授权的做法见 `revium-browser-test` 第 8 步。
